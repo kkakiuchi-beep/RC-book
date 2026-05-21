@@ -31,8 +31,11 @@ export default function SearchPage() {
 
   const handleInput = (value: string) => {
     setInput(value);
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => search(value), 350);
+    if (timerRef.current) {
+  clearTimeout(timerRef.current);
+}
+
+timerRef.current = setTimeout(() => search(value), 350);
   };
 
   const filtered = filter === "all" ? results : results.filter((r) => r.type === filter);
