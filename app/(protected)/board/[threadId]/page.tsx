@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { CommentSection } from "@/components/board/CommentSection";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { MentionContent } from "@/components/shared/MentionContent";
 import { useThread } from "@/hooks/use-board";
 import { useAuth } from "@/lib/auth";
 import { canResolveThread, canDeleteThread } from "@/lib/permissions";
@@ -208,7 +209,7 @@ export default function ThreadDetailPage() {
           </div>
         </div>
 
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{thread.content}</p>
+        <MentionContent content={thread.content} className="text-sm leading-relaxed whitespace-pre-wrap block" />
 
         {/* 解決済みボタン */}
         {appUser && canResolveThread(appUser, thread) && (
@@ -239,9 +240,9 @@ export default function ThreadDetailPage() {
       {/* コメント */}
       <CommentSection
         comments={comments}
-        onAddComment={async (content, isAnonymous) => {
+        onAddComment={async (content, isAnonymous, mentionedUserIds) => {
           if (!appUser) return;
-          await addComment(content, isAnonymous, appUser);
+          await addComment(content, isAnonymous, appUser, mentionedUserIds);
         }}
         onDeleteComment={async (commentId) => {
           await deleteComment(commentId);

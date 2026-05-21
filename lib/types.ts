@@ -98,7 +98,7 @@ export interface ThreadComment {
 }
 
 // ── notifications コレクション ─────────────────────────────────
-export type NotificationType = "comment" | "thread_comment" | "like";
+export type NotificationType = "comment" | "thread_comment" | "like" | "mention";
 
 export interface Notification {
   id: string;

@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { MentionContent } from "@/components/shared/MentionContent";
 import { relativeTime, cn } from "@/lib/utils";
 import type { TimelinePost, AppUser } from "@/lib/types";
 
@@ -135,7 +136,7 @@ function PostCardInner({ post, appUser, isLiked = false, onToggleLike, onEdit, o
         </div>
       </div>
 
-      <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
+      <MentionContent content={post.content} className="text-sm leading-relaxed whitespace-pre-wrap" />
 
       <div className="flex items-center gap-4 pt-1 border-t">
         {/* いいね */}

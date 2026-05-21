@@ -88,9 +88,9 @@ export default function BoardPage() {
       <ThreadForm
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSubmit={async (title, content, category, isAnonymous) => {
+        onSubmit={async (title, content, category, isAnonymous, mentionedUserIds) => {
           if (!appUser) return;
-          await createThread(title, content, category, isAnonymous, appUser);
+          await createThread(title, content, category, isAnonymous, appUser, mentionedUserIds);
         }}
       />
     </div>

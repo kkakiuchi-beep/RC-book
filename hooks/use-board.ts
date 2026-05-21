@@ -94,9 +94,10 @@ export function useThreads() {
     content: string,
     category: ThreadCategory,
     isAnonymous: boolean,
-    appUser: AppUser
+    appUser: AppUser,
+    mentionedUserIds: string[] = []
   ) => {
-    await addDoc(collection(db, "threads"), {
+    const docRef = await addDoc(collection(db, "threads"), {
       authorId: appUser.uid,
       authorName: isAnonymous ? "匿名" : appUser.displayName,
       authorPhotoURL: isAnonymous ? null : (appUser.photoURL ?? null),
@@ -111,6 +112,19 @@ export function useThreads() {
     });
     _threadsCache = null; // キャッシュを無効化
     await fetchThreads(true);
+    // メンション通知
+    for (const uid of mentionedUserIds) {
+      await createNotification({
+        userId: uid,
+        type: "mention",
+        message: `${isAnonymous ? "匿名" : appUser.displayName}さんがあなたをメンションしました`,
+        relatedId: docRef.id,
+        relatedPath: `/board/${docRef.id}`,
+        fromUserId: appUser.uid,
+        fromUserName: appUser.displayName,
+        fromUserPhotoURL: appUser.photoURL,
+      });
+    }
   };
 
   return { threads, loading, error, createThread, refetch: fetchThreads };
@@ -156,7 +170,12 @@ export function useThread(threadId: string) {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addComment = async (content: string, isAnonymous: boolean, appUser: AppUser) => {
+  const addComment = async (
+    content: string,
+    isAnonymous: boolean,
+    appUser: AppUser,
+    mentionedUserIds: string[] = []
+  ) => {
     await addDoc(collection(db, "threadComments"), {
       threadId,
       authorId: appUser.uid,
@@ -178,6 +197,19 @@ export function useThread(threadId: string) {
         userId: thread.authorId,
         type: "thread_comment",
         message: `${appUser.displayName}さんが「${thread.title}」にコメントしました`,
+        relatedId: threadId,
+        relatedPath: `/board/${threadId}`,
+        fromUserId: appUser.uid,
+        fromUserName: appUser.displayName,
+        fromUserPhotoURL: appUser.photoURL,
+      });
+    }
+    // メンション通知
+    for (const uid of mentionedUserIds) {
+      await createNotification({
+        userId: uid,
+        type: "mention",
+        message: `${isAnonymous ? "匿名" : appUser.displayName}さんがあなたをメンションしました`,
         relatedId: threadId,
         relatedPath: `/board/${threadId}`,
         fromUserId: appUser.uid,

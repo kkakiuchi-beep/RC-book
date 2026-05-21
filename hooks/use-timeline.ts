@@ -79,8 +79,13 @@ export function useTimeline() {
     });
   };
 
-  const createPost = async (content: string, tags: string[], appUser: AppUser) => {
-    await addDoc(collection(db, "timelinePosts"), {
+  const createPost = async (
+    content: string,
+    tags: string[],
+    appUser: AppUser,
+    mentionedUserIds: string[] = []
+  ) => {
+    const docRef = await addDoc(collection(db, "timelinePosts"), {
       authorId: appUser.uid,
       authorName: appUser.displayName,
       authorPhotoURL: appUser.photoURL ?? null,
@@ -94,6 +99,19 @@ export function useTimeline() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    // メンション通知
+    for (const uid of mentionedUserIds) {
+      await createNotification({
+        userId: uid,
+        type: "mention",
+        message: `${appUser.displayName}さんがあなたをメンションしました`,
+        relatedId: docRef.id,
+        relatedPath: `/timeline/${docRef.id}`,
+        fromUserId: appUser.uid,
+        fromUserName: appUser.displayName,
+        fromUserPhotoURL: appUser.photoURL,
+      });
+    }
   };
 
   /** いいねトグル（楽観的更新） */
@@ -205,7 +223,11 @@ export function usePost(postId: string) {
     fetchAll();
   }, [postId]);
 
-  const addComment = async (content: string, appUser: AppUser) => {
+  const addComment = async (
+    content: string,
+    appUser: AppUser,
+    mentionedUserIds: string[] = []
+  ) => {
     if (!post) return;
     await addDoc(collection(db, "timelineComments"), {
       postId,
@@ -228,6 +250,19 @@ export function usePost(postId: string) {
       fromUserName: appUser.displayName,
       fromUserPhotoURL: appUser.photoURL,
     });
+    // メンション通知（投稿者への通知と重複しても可）
+    for (const uid of mentionedUserIds) {
+      await createNotification({
+        userId: uid,
+        type: "mention",
+        message: `${appUser.displayName}さんがあなたをメンションしました`,
+        relatedId: postId,
+        relatedPath: `/timeline/${postId}`,
+        fromUserId: appUser.uid,
+        fromUserName: appUser.displayName,
+        fromUserPhotoURL: appUser.photoURL,
+      });
+    }
     setComments((prev) => [
       ...prev,
       {

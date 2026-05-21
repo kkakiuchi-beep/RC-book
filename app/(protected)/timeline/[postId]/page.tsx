@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Send, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -14,20 +13,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { MentionTextarea } from "@/components/shared/MentionTextarea";
+import { MentionContent } from "@/components/shared/MentionContent";
 import { PostCard } from "@/components/timeline/PostCard";
 import { usePost } from "@/hooks/use-timeline";
 import { useAuth } from "@/lib/auth";
+import { useOrg } from "@/hooks/use-org";
 import { canDeletePost, canEditPost, canDeleteTimelineComment } from "@/lib/permissions";
 import { relativeTime } from "@/lib/utils";
 import { toast } from "sonner";
+import type { AppUser } from "@/lib/types";
 
 export default function PostDetailPage() {
   const { postId } = useParams<{ postId: string }>();
   const router = useRouter();
   const { appUser } = useAuth();
+  const { users } = useOrg();
   const { post, comments, loading, addComment, editPost, removePost, deleteComment } = usePost(postId);
   const [content, setContent] = useState("");
+  const [mentionedUsers, setMentionedUsers] = useState<AppUser[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const mentionUsers = users.filter((u) => u.uid !== appUser?.uid);
   const [deleteCommentId, setDeleteCommentId] = useState<string | null>(null);
   const [deletingComment, setDeletingComment] = useState(false);
 
@@ -36,8 +42,9 @@ export default function PostDetailPage() {
     if (!content.trim() || !appUser) return;
     setSubmitting(true);
     try {
-      await addComment(content.trim(), appUser);
+      await addComment(content.trim(), appUser, mentionedUsers.map((u) => u.uid));
       setContent("");
+      setMentionedUsers([]);
       toast.success("コメントしました");
     } catch {
       toast.error("コメントに失敗しました");
@@ -130,7 +137,7 @@ export default function PostDetailPage() {
                 </Button>
               )}
             </div>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap pl-10">{c.content}</p>
+            <MentionContent content={c.content} className="text-sm leading-relaxed whitespace-pre-wrap pl-10 block" />
           </div>
         ))}
         {comments.length === 0 && (
@@ -143,11 +150,14 @@ export default function PostDetailPage() {
         <form onSubmit={handleSubmit} className="bg-card rounded-xl border p-4 space-y-3">
           <div className="flex items-start gap-3">
             <UserAvatar name={appUser.displayName} uid={appUser.uid} photoURL={appUser.photoURL} size="sm" />
-            <Textarea
-              placeholder="コメントを入力..."
+            <MentionTextarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="flex-1 min-h-[72px] border-0 shadow-none focus-visible:ring-0 px-0 resize-none"
+              onChange={setContent}
+              onMentionedUsersChange={setMentionedUsers}
+              placeholder="コメントを入力... (@名前 でメンション)"
+              wrapperClassName="flex-1"
+              className="min-h-[72px] border-0 shadow-none focus-visible:ring-0 px-0 py-0"
+              allUsers={mentionUsers}
             />
           </div>
           <div className="flex justify-end border-t pt-3">

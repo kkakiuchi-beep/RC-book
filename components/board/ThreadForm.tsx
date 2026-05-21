@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -14,8 +13,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { MentionTextarea } from "@/components/shared/MentionTextarea";
 import { useAuth } from "@/lib/auth";
+import { useOrg } from "@/hooks/use-org";
 import type { ThreadCategory } from "@/lib/types";
+import type { AppUser } from "@/lib/types";
 
 const CATEGORIES: ThreadCategory[] = ["雑談", "質問", "報告", "提案"];
 
@@ -26,22 +28,27 @@ interface ThreadFormProps {
     title: string,
     content: string,
     category: ThreadCategory,
-    isAnonymous: boolean
+    isAnonymous: boolean,
+    mentionedUserIds: string[]
   ) => Promise<void>;
 }
 
 export function ThreadForm({ open, onOpenChange, onSubmit }: ThreadFormProps) {
   const { appUser } = useAuth();
+  const { users } = useOrg();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<ThreadCategory>("雑談");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<AppUser[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   if (!appUser) return null;
 
+  const mentionUsers = users.filter((u) => u.uid !== appUser.uid);
+
   const reset = () => {
-    setTitle(""); setContent(""); setCategory("雑談"); setIsAnonymous(false);
+    setTitle(""); setContent(""); setCategory("雑談"); setIsAnonymous(false); setMentionedUsers([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,7 +56,13 @@ export function ThreadForm({ open, onOpenChange, onSubmit }: ThreadFormProps) {
     if (!title.trim() || !content.trim()) return;
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), content.trim(), category, isAnonymous);
+      await onSubmit(
+        title.trim(),
+        content.trim(),
+        category,
+        isAnonymous,
+        mentionedUsers.map((u) => u.uid)
+      );
       toast.success("スレッドを作成しました");
       reset();
       onOpenChange(false);
@@ -100,15 +113,18 @@ export function ThreadForm({ open, onOpenChange, onSubmit }: ThreadFormProps) {
             />
           </div>
 
-          {/* 本文 */}
+          {/* 本文（メンション対応） */}
           <div className="space-y-1.5">
             <Label htmlFor="thread-content">内容</Label>
-            <Textarea
+            <MentionTextarea
               id="thread-content"
-              placeholder="詳細を入力..."
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
+              onMentionedUsersChange={setMentionedUsers}
+              placeholder="詳細を入力... (@名前 でメンション)"
+              wrapperClassName="w-full"
               className="min-h-[100px]"
+              allUsers={mentionUsers}
               required
             />
           </div>

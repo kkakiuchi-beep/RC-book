@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,32 +14,40 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { MentionTextarea } from "@/components/shared/MentionTextarea";
+import { MentionContent } from "@/components/shared/MentionContent";
 import { useAuth } from "@/lib/auth";
+import { useOrg } from "@/hooks/use-org";
 import { canDeleteBoardComment } from "@/lib/permissions";
 import { relativeTime } from "@/lib/utils";
-import type { ThreadComment } from "@/lib/types";
+import type { ThreadComment, AppUser } from "@/lib/types";
 
 interface CommentSectionProps {
   comments: ThreadComment[];
-  onAddComment: (content: string, isAnonymous: boolean) => Promise<void>;
+  onAddComment: (content: string, isAnonymous: boolean, mentionedUserIds: string[]) => Promise<void>;
   onDeleteComment?: (commentId: string) => Promise<void>;
 }
 
 export function CommentSection({ comments, onAddComment, onDeleteComment }: CommentSectionProps) {
   const { appUser } = useAuth();
+  const { users } = useOrg();
   const [content, setContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<AppUser[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const mentionUsers = users.filter((u) => u.uid !== appUser?.uid);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || !appUser) return;
     setSubmitting(true);
     try {
-      await onAddComment(content.trim(), isAnonymous);
+      await onAddComment(content.trim(), isAnonymous, mentionedUsers.map((u) => u.uid));
       setContent("");
+      setMentionedUsers([]);
       toast.success("コメントしました");
     } catch {
       toast.error("コメントに失敗しました");
@@ -97,7 +104,10 @@ export function CommentSection({ comments, onAddComment, onDeleteComment }: Comm
                 </Button>
               )}
             </div>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap pl-10">{c.content}</p>
+            <MentionContent
+              content={c.content}
+              className="text-sm leading-relaxed whitespace-pre-wrap pl-10 block"
+            />
           </div>
         ))}
         {comments.length === 0 && (
@@ -112,11 +122,14 @@ export function CommentSection({ comments, onAddComment, onDeleteComment }: Comm
         <form onSubmit={handleSubmit} className="bg-card rounded-xl border p-4 space-y-3">
           <div className="flex items-start gap-3">
             <UserAvatar name={appUser.displayName} uid={appUser.uid} photoURL={appUser.photoURL} size="sm" />
-            <Textarea
-              placeholder="コメントを入力..."
+            <MentionTextarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="flex-1 min-h-[72px] border-0 shadow-none focus-visible:ring-0 px-0 resize-none"
+              onChange={setContent}
+              onMentionedUsersChange={setMentionedUsers}
+              placeholder="コメントを入力... (@名前 でメンション)"
+              wrapperClassName="flex-1"
+              className="min-h-[72px] border-0 shadow-none focus-visible:ring-0 px-0 py-0"
+              allUsers={mentionUsers}
             />
           </div>
           <div className="flex items-center justify-between border-t pt-3">
