@@ -19,6 +19,7 @@ export function useNotifications() {
   const { appUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!appUser) {
@@ -55,7 +56,8 @@ export function useNotifications() {
         setLoading(false);
       },
       (err) => {
-        console.error("useNotifications:", err);
+        console.error("[通知] 読み取りエラー:", err);
+        setFetchError(err.message ?? "不明なエラー");
         setLoading(false);
       }
     );
@@ -82,5 +84,5 @@ export function useNotifications() {
     await batch.commit();
   };
 
-  return { notifications, loading, unreadCount, markAsRead, markAllAsRead };
+  return { notifications, loading, fetchError, unreadCount, markAsRead, markAllAsRead };
 }

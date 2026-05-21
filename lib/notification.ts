@@ -18,11 +18,18 @@ export async function createNotification(p: CreateNotificationParams) {
   if (p.userId === p.fromUserId) return;
   try {
     await addDoc(collection(db, "notifications"), {
-      ...p,
+      userId: p.userId,
+      type: p.type,
+      message: p.message,
+      relatedId: p.relatedId,
+      relatedPath: p.relatedPath,
+      fromUserId: p.fromUserId,
+      fromUserName: p.fromUserName,
+      fromUserPhotoURL: p.fromUserPhotoURL ?? null,
       isRead: false,
       createdAt: serverTimestamp(),
     });
   } catch (e) {
-    console.warn("createNotification failed:", e);
+    console.error("[通知] 作成失敗:", e);
   }
 }
