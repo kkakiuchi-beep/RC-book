@@ -1,50 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CheckCheck, FlaskConical } from "lucide-react";
-import { useState } from "react";
+import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { useNotifications } from "@/hooks/use-notifications";
-import { useAuth } from "@/lib/auth";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { relativeTime, cn } from "@/lib/utils";
 
 export default function NotificationsPage() {
-  const { appUser } = useAuth();
   const { notifications, loading, fetchError, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const [testResult, setTestResult] = useState<string | null>(null);
-  const [testing, setTesting] = useState(false);
-
-  // 書き込み・読み取りの動作確認用（診断）
-  const handleTest = async () => {
-    if (!appUser) return;
-    setTesting(true);
-    setTestResult(null);
-    try {
-      await addDoc(collection(db, "notifications"), {
-        userId: appUser.uid,
-        type: "mention",
-        message: "【テスト】通知の動作確認です",
-        relatedId: "test",
-        relatedPath: "/notifications",
-        fromUserId: "system",
-        fromUserName: "システム",
-        fromUserPhotoURL: null,
-        isRead: false,
-        createdAt: serverTimestamp(),
-      });
-      setTestResult("✅ 書き込み成功！上に通知が表示されれば完全に動作しています");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setTestResult(`❌ 書き込み失敗: ${msg}`);
-    } finally {
-      setTesting(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -121,26 +87,6 @@ export default function NotificationsPage() {
               </div>
             </Link>
           ))}
-        </div>
-      )}
-
-      {/* 診断ボタン（動作確認用） */}
-      {!loading && (
-        <div className="border border-dashed rounded-xl p-4 space-y-2">
-          <p className="text-xs text-muted-foreground font-medium">動作確認</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 text-xs"
-            onClick={handleTest}
-            disabled={testing}
-          >
-            <FlaskConical className="w-3.5 h-3.5" />
-            {testing ? "テスト中..." : "テスト通知を作成"}
-          </Button>
-          {testResult && (
-            <p className="text-xs">{testResult}</p>
-          )}
         </div>
       )}
     </div>
