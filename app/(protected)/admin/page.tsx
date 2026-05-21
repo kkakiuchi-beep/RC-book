@@ -39,7 +39,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { Shield, Users, Building2, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { Shield, Users, Building2, Plus, Pencil, Trash2, ChevronDown, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import type { AppUser, Department, UserRole } from "@/lib/types";
 import {
@@ -122,6 +122,71 @@ function DeptDialog({ open, onOpenChange, initial, onSave }: DeptDialogProps) {
   );
 }
 
+// ─── ユーザー編集ダイアログ（部署割り当て） ─────────────────────
+interface UserEditDialogProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  user: AppUser | null;
+  depts: Department[];
+  onSave: (uid: string, departmentId: string | null, departmentName: string | null) => Promise<void>;
+}
+
+function UserEditDialog({ open, onOpenChange, user, depts, onSave }: UserEditDialogProps) {
+  const [deptId, setDeptId] = useState(user?.departmentId ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) setDeptId(user?.departmentId ?? "");
+  }, [open, user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const dept = depts.find((d) => d.id === deptId);
+      await onSave(user.uid, deptId || null, dept?.name ?? null);
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{user?.displayName} の部署を変更</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-1">
+          <div className="space-y-1.5">
+            <Label htmlFor="user-dept">部署</Label>
+            <select
+              id="user-dept"
+              value={deptId}
+              onChange={(e) => setDeptId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">未設定</option>
+              {depts.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            現在: {user?.departmentName ?? "未設定"}
+          </p>
+        </div>
+        <DialogFooter className="pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>キャンセル</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "保存中…" : "変更する"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── ロール変更ドロップダウン ──────────────────────────────────
 function RoleDropdown({
   user,
@@ -185,6 +250,8 @@ export default function AdminPage() {
   const [deptsLoading, setDeptsLoading] = useState(true);
   const [deptDialog, setDeptDialog] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [userEditDialog, setUserEditDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
 
   // admin / manager 以外はリダイレクト
   useEffect(() => {
@@ -261,6 +328,24 @@ export default function AdminPage() {
       toast.success(`ロールを「${ROLE_LABELS[newRole]}」に変更しました`);
     } catch {
       toast.error("ロールの変更に失敗しました");
+    }
+  };
+
+  // ── ユーザーの部署変更 ──
+  const changeUserDept = async (
+    uid: string,
+    departmentId: string | null,
+    departmentName: string | null
+  ) => {
+    try {
+      await updateDoc(doc(db, "users", uid), { departmentId, departmentName });
+      setUsers((prev) =>
+        prev.map((u) => (u.uid === uid ? { ...u, departmentId, departmentName } : u))
+      );
+      toast.success(`部署を「${departmentName ?? "未設定"}」に変更しました`);
+    } catch {
+      toast.error("部署の変更に失敗しました");
+      throw new Error("failed");
     }
   };
 
@@ -396,10 +481,25 @@ export default function AdminPage() {
                         <p className="text-xs text-muted-foreground">{u.departmentName}</p>
                       )}
                     </div>
-                    {/* ロール変更は admin のみ、自分自身は変更不可 */}
-                    {isAdminUser && u.uid !== appUser?.uid && (
-                      <RoleDropdown user={u} onChangeRole={changeRole} />
-                    )}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {/* 部署変更ボタン */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 gap-1 text-xs"
+                        onClick={() => {
+                          setEditingUser(u);
+                          setUserEditDialog(true);
+                        }}
+                      >
+                        <UserCog className="w-3.5 h-3.5" />
+                        部署
+                      </Button>
+                      {/* ロール変更は admin のみ、自分自身は変更不可 */}
+                      {isAdminUser && u.uid !== appUser?.uid && (
+                        <RoleDropdown user={u} onChangeRole={changeRole} />
+                      )}
+                    </div>
                   </div>
                 ))}
             </div>
@@ -497,6 +597,17 @@ export default function AdminPage() {
         }}
         initial={editingDept}
         onSave={saveDept}
+      />
+
+      <UserEditDialog
+        open={userEditDialog}
+        onOpenChange={(v) => {
+          setUserEditDialog(v);
+          if (!v) setEditingUser(null);
+        }}
+        user={editingUser}
+        depts={depts}
+        onSave={changeUserDept}
       />
     </div>
   );
