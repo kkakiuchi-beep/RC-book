@@ -70,8 +70,18 @@ export function useChats() {
     if (!appUser) throw new Error("not authenticated");
     const id = chatId(appUser.uid, other.uid);
     const ref = doc(db, "chats", id);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
+
+    // 未作成ドキュメントへの getDoc は Firestore ルールで弾かれる場合があるので try-catch
+    let docExists = false;
+    try {
+      const snap = await getDoc(ref);
+      docExists = snap.exists();
+    } catch {
+      // 権限エラー = ドキュメント未存在と見なして作成へ進む
+      docExists = false;
+    }
+
+    if (!docExists) {
       await setDoc(ref, {
         memberIds: [appUser.uid, other.uid],
         memberNames: {
