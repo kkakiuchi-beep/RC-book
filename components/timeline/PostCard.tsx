@@ -92,7 +92,7 @@ function PostCardInner({ post, appUser, isLiked = false, onToggleLike, onEdit, o
       )}
 
       <div className="flex items-start gap-3">
-        <UserAvatar name={post.authorName} photoURL={post.authorPhotoURL} uid={post.authorId} size="md" />
+        <UserAvatar name={post.authorName} photoURL={post.authorPhotoURL} uid={post.authorId} size="md" href={`/users/${post.authorId}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm">{post.authorName}</span>

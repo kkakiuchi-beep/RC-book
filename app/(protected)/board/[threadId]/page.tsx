@@ -200,6 +200,7 @@ export default function ThreadDetailPage() {
             uid={thread.isAnonymous ? "anon" : thread.authorId}
             photoURL={thread.isAnonymous ? null : thread.authorPhotoURL}
             size="sm"
+            href={thread.isAnonymous ? undefined : `/users/${thread.authorId}`}
           />
           <div>
             <p className="text-sm font-medium">{thread.authorName}</p>

@@ -18,6 +18,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/search": "検索",
   "/chat": "チャット",
   "/consult": "相談したい",
+  "/users": "メンバープロフィール",
 };
 
 function getTitle(pathname: string): string {

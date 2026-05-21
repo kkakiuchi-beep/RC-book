@@ -79,6 +79,7 @@ export function CommentSection({ comments, onAddComment, onDeleteComment }: Comm
                 uid={c.isAnonymous ? "anon" : c.authorId}
                 photoURL={c.isAnonymous ? null : c.authorPhotoURL}
                 size="sm"
+                href={c.isAnonymous ? undefined : `/users/${c.authorId}`}
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{c.authorName}</p>

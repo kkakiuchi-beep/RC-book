@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import { cn, getInitials, avatarColor } from "@/lib/utils";
 
@@ -6,6 +7,7 @@ interface UserAvatarProps {
   photoURL?: string | null;
   uid?: string;
   size?: "sm" | "md" | "lg";
+  href?: string;
 }
 
 const sizeMap = {
@@ -16,20 +18,16 @@ const sizeMap = {
 
 const imgSizeMap = { sm: 32, md: 40, lg: 48 };
 
-export function UserAvatar({ name, photoURL, uid = name, size = "md" }: UserAvatarProps) {
+export function UserAvatar({ name, photoURL, uid = name, size = "md", href }: UserAvatarProps) {
   const color = avatarColor(uid);
   const initials = getInitials(name);
   const px = imgSizeMap[size];
 
-  if (photoURL) {
-    return (
-      <div className={cn("rounded-full overflow-hidden flex-shrink-0", sizeMap[size])}>
-        <Image src={photoURL} alt={name} width={px} height={px} className="object-cover" />
-      </div>
-    );
-  }
-
-  return (
+  const avatar = photoURL ? (
+    <div className={cn("rounded-full overflow-hidden flex-shrink-0", sizeMap[size])}>
+      <Image src={photoURL} alt={name} width={px} height={px} className="object-cover" />
+    </div>
+  ) : (
     <div
       className={cn(
         "rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold",
@@ -40,4 +38,18 @@ export function UserAvatar({ name, photoURL, uid = name, size = "md" }: UserAvat
       {initials}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="flex-shrink-0 hover:opacity-75 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {avatar}
+      </Link>
+    );
+  }
+
+  return avatar;
 }

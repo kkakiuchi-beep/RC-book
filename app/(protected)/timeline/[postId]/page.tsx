@@ -113,7 +113,7 @@ export default function PostDetailPage() {
         {comments.map((c) => (
           <div key={c.id} className="bg-card rounded-xl border p-4 space-y-2">
             <div className="flex items-center gap-2">
-              <UserAvatar name={c.authorName} uid={c.authorId} photoURL={c.authorPhotoURL} size="sm" />
+              <UserAvatar name={c.authorName} uid={c.authorId} photoURL={c.authorPhotoURL} size="sm" href={`/users/${c.authorId}`} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{c.authorName}</p>
                 <p className="text-xs text-muted-foreground">{relativeTime(c.createdAt)}</p>
