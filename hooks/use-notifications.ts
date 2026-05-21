@@ -5,8 +5,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
-  limit,
   onSnapshot,
   updateDoc,
   doc,
@@ -27,33 +25,33 @@ export function useNotifications() {
       setLoading(false);
       return;
     }
+    // orderBy を除外して複合インデックスなしで動作させ、JS 側でソート・件数制限
     const q = query(
       collection(db, "notifications"),
-      where("userId", "==", appUser.uid),
-      orderBy("createdAt", "desc"),
-      limit(50)
+      where("userId", "==", appUser.uid)
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setNotifications(
-          snap.docs.map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              userId: data.userId as string,
-              type: data.type,
-              message: data.message as string,
-              relatedId: data.relatedId as string,
-              relatedPath: data.relatedPath as string,
-              fromUserId: data.fromUserId as string,
-              fromUserName: data.fromUserName as string,
-              fromUserPhotoURL: (data.fromUserPhotoURL as string | null) ?? null,
-              isRead: (data.isRead as boolean) ?? false,
-              createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
-            } as Notification;
-          })
-        );
+        const items = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            userId: data.userId as string,
+            type: data.type,
+            message: data.message as string,
+            relatedId: data.relatedId as string,
+            relatedPath: data.relatedPath as string,
+            fromUserId: data.fromUserId as string,
+            fromUserName: data.fromUserName as string,
+            fromUserPhotoURL: (data.fromUserPhotoURL as string | null) ?? null,
+            isRead: (data.isRead as boolean) ?? false,
+            createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
+          } as Notification;
+        });
+        // 新しい順にソートして最大50件
+        items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setNotifications(items.slice(0, 50));
         setLoading(false);
       },
       (err) => {
