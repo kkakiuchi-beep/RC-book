@@ -134,11 +134,13 @@ export default function OrgPage() {
           </h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {members.map((member) => (
-              <button
+              <div
                 key={member.uid}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedMember(member)}
-                className="bg-card rounded-xl border px-4 py-3.5 flex items-center gap-3 text-left hover:bg-secondary/50 transition-colors w-full"
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedMember(member); }}
+                className="bg-card rounded-xl border px-4 py-3.5 flex items-center gap-3 text-left hover:bg-secondary/50 transition-colors w-full cursor-pointer"
               >
                 <UserAvatar name={member.displayName} photoURL={member.photoURL} uid={member.uid} size="lg" />
                 <div className="flex-1 min-w-0">
@@ -179,13 +181,13 @@ export default function OrgPage() {
                     size="icon"
                     className="w-8 h-8 flex-shrink-0 text-muted-foreground hover:text-primary"
                     disabled={dmLoading === member.uid}
-                    onClick={(e) => handleDM(member, e)}
+                    onClick={(e) => { e.stopPropagation(); handleDM(member); }}
                     aria-label={`${member.displayName}さんにDM`}
                   >
                     <MessageSquare className="w-4 h-4" />
                   </Button>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         </section>
