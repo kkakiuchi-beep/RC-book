@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/timeline": "タイムライン",
-  "/board": "相談ボード",
+  "/board": "掲示板",
   "/org": "組織図",
   "/files": "ファイル",
   "/profile": "プロフィール",

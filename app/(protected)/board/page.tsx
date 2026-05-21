@@ -28,7 +28,7 @@ export default function BoardPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">相談ボード</h1>
+        <h1 className="text-xl font-bold">掲示板</h1>
         {appUser && (
           <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
             <Plus className="w-4 h-4" />
