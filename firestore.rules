@@ -1,0 +1,220 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── 共通関数 ──────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myUserPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasMyUserDoc() {
+      return isSignedIn() && exists(myUserPath());
+    }
+
+    function getMyRole() {
+      return hasMyUserDoc()
+        ? get(myUserPath()).data.role
+        : 'member';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getMyRole() == 'admin';
+    }
+
+    function isManager() {
+      return isSignedIn() && getMyRole() == 'manager';
+    }
+
+    function isAdminOrManager() {
+      return isAdmin() || isManager();
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── users ────────────────────────────────────────────────
+
+    match /users/{uid} {
+
+      // ログイン済みなら閲覧可能
+      allow read: if isSignedIn();
+
+      // 初回ログイン時に自分のユーザー作成可能
+      allow create: if isOwner(uid);
+
+      // 本人 or admin 更新可能
+      // manager は role変更以外のみ
+      allow update: if isOwner(uid)
+        || isAdmin()
+        || (
+          isManager()
+          && hasMyUserDoc()
+          && get(myUserPath()).data.departmentId
+             == resource.data.departmentId
+          && !('role' in request.resource.data)
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // ── departments ──────────────────────────────────────────
+
+    match /departments/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── timelinePosts ────────────────────────────────────────
+
+    match /timelinePosts/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn();
+
+      allow update: if isOwner(resource.data.authorId)
+        || isAdmin()
+        || (
+          isManager()
+          && request.resource.data
+              .diff(resource.data)
+              .affectedKeys()
+              .hasOnly(['isPinned'])
+        );
+
+      allow delete: if isOwner(resource.data.authorId)
+        || isAdmin();
+    }
+
+    // ── timelineComments ─────────────────────────────────────
+
+    match /timelineComments/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn();
+
+      allow update: if isOwner(resource.data.authorId);
+
+      allow delete: if isOwner(resource.data.authorId)
+        || isAdminOrManager();
+    }
+
+    // ── likes ────────────────────────────────────────────────
+
+    match /likes/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.userId;
+
+      allow delete: if isSignedIn()
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // ── threads ──────────────────────────────────────────────
+
+    match /threads/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn();
+
+      allow update: if isOwner(resource.data.authorId)
+        || isAdmin()
+        || (
+          isAdminOrManager()
+          && request.resource.data
+              .diff(resource.data)
+              .affectedKeys()
+              .hasOnly(['isResolved', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(resource.data.authorId)
+        || isAdmin();
+    }
+
+    // ── threadComments ───────────────────────────────────────
+
+    match /threadComments/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn();
+
+      allow update: if isOwner(resource.data.authorId);
+
+      allow delete: if isOwner(resource.data.authorId)
+        || isAdminOrManager();
+    }
+
+    // ── driveLinks ───────────────────────────────────────────
+
+    match /driveLinks/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn();
+
+      allow update: if isOwner(resource.data.addedBy)
+        || isAdminOrManager();
+
+      allow delete: if isOwner(resource.data.addedBy)
+        || isAdminOrManager();
+    }
+
+    // ── notifications ────────────────────────────────────────
+
+    match /notifications/{id} {
+
+      allow read: if isSignedIn()
+        && request.auth.uid == resource.data.userId;
+
+      allow create: if isSignedIn();
+
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.userId;
+
+      allow delete: if isSignedIn()
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // ── chats ────────────────────────────────────────────────
+
+    match /chats/{id} {
+
+      allow read: if isSignedIn()
+        && request.auth.uid in resource.data.memberIds;
+
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.memberIds;
+
+      allow update: if isSignedIn()
+        && request.auth.uid in resource.data.memberIds;
+
+      allow delete: if false;
+    }
+
+    // ── chatMessages ─────────────────────────────────────────
+
+    match /chatMessages/{id} {
+
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.authorId;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+  }
+}

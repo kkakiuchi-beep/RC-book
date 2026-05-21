@@ -1,0 +1,45 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import { Activity, LayoutGrid, Users, MessageSquare, Shield } from "lucide-react";
+import { canAccessAdmin } from "@/lib/permissions";
+
+const BASE_ITEMS = [
+  { label: "タイムライン", href: "/timeline", icon: Activity },
+  { label: "ボード", href: "/board", icon: LayoutGrid },
+  { label: "組織図", href: "/org", icon: Users },
+  { label: "チャット", href: "/chat", icon: MessageSquare },
+] as const;
+
+const ADMIN_ITEM = { label: "管理", href: "/admin", icon: Shield } as const;
+
+export function BottomNav() {
+  const pathname = usePathname();
+  const { appUser } = useAuth();
+
+  const items = canAccessAdmin(appUser) ? [...BASE_ITEMS, ADMIN_ITEM] : BASE_ITEMS;
+
+  return (
+    <div className="flex items-stretch justify-around pb-safe">
+      {items.map(({ label, href, icon: Icon }) => {
+        const active = pathname === href || pathname.startsWith(href + "/");
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              "flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-colors",
+              active ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <Icon className={cn("w-5 h-5", active && "stroke-[2.5px]")} />
+            <span className="text-[10px] font-medium leading-none">{label}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}

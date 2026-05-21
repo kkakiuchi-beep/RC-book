@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40" fill="none">
+  <rect width="40" height="40" rx="10" fill="#2563EB"/>
+  <path d="M12 30V18l8-5 8 5v12H12z" fill="white"/>
+  <rect x="17" y="22" width="6" height="8" rx="1" fill="#2563EB"/>
+  <rect x="13" y="17" width="5" height="4" rx="0.5" fill="white" fill-opacity="0.4"/>
+  <rect x="22" y="17" width="5" height="4" rx="0.5" fill="white" fill-opacity="0.4"/>
+  <text x="50" y="26" font-family="system-ui,-apple-system,sans-serif" font-size="15" font-weight="700" fill="#1e293b">社内ポータル</text>
+</svg>
