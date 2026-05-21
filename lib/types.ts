@@ -17,6 +17,7 @@ export interface AppUser {
   lineId: string | null;
   hobbies: string | null;
   skills: string | null;
+  bio: string | null;       // ひとこと（名前の下に表示）
   canHelp: string | null;   // カンマ区切り「これは私に聞け！」
   needHelp: string | null;  // カンマ区切り「たすけてほしい！」
   createdAt: Date;

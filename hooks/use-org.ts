@@ -48,6 +48,7 @@ export function useOrg() {
                 role: data.role ?? "staff",
                 instagramId: data.instagramId ?? null,
                 lineId: data.lineId ?? null,
+                bio: data.bio ?? null,
                 hobbies: data.hobbies ?? null,
                 skills: data.skills ?? null,
                 canHelp: data.canHelp ?? null,

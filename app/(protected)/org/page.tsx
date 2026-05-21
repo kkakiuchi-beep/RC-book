@@ -463,6 +463,9 @@ function MemberProfile({ member, appUser, depts, onDM, dmLoading }: MemberProfil
               </Badge>
             )}
           </div>
+          {member.bio && (
+            <p className="text-xs text-muted-foreground leading-relaxed">{member.bio}</p>
+          )}
           {member.departmentName && (
             <p className="text-sm text-muted-foreground">{member.departmentName}</p>
           )}
