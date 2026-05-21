@@ -159,7 +159,7 @@ function PostCardInner({ post, appUser, isLiked = false, onToggleLike, onEdit, o
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[36px] px-1"
         >
           <MessageCircle className="w-4 h-4" />
-          <span>{post.commentCount}</span>
+          <span>{Math.max(0, post.commentCount)}</span>
         </Link>
       </div>
 

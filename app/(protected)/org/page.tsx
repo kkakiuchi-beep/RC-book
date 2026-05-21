@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, MessageSquare, Users,
-  Mail, Instagram, AtSign, Smile, Star, Target, HelpCircle,
+  Instagram, AtSign, Target, HelpCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -275,7 +275,7 @@ export default function OrgPage() {
 
       {/* メンバー詳細ダイアログ */}
       <Dialog open={!!selectedMember} onOpenChange={(o) => !o && setSelectedMember(null)}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden">
+        <DialogContent className="max-w-md p-0 overflow-hidden">
           {selectedMember && (
             <MemberProfile
               member={selectedMember}
@@ -421,152 +421,159 @@ interface MemberProfileProps {
 function MemberProfile({ member, appUser, depts, onDM, dmLoading }: MemberProfileProps) {
   const isMe = appUser?.uid === member.uid;
   const color = getDeptColor(member.departmentId, depts);
+  const skillTags = member.skills?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
   const canHelpTags = member.canHelp?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
   const needHelpTags = member.needHelp?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
+  const hasSkillsSection = skillTags.length > 0 || canHelpTags.length > 0 || needHelpTags.length > 0;
+  const hasSNS = !!(member.instagramId || member.lineId);
 
   return (
     <div className="max-h-[80vh] overflow-y-auto">
-      {/* グラデーションヘッダー */}
-      <div className="h-16" style={{ background: `linear-gradient(135deg, ${color}40, ${color}10)` }} />
+      <div className="p-4 space-y-3">
 
-      <div className="px-5 pb-5">
-        <div className="-mt-8 mb-3 flex items-end justify-between">
-          {member.photoURL ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={member.photoURL}
-              alt={member.displayName}
-              className="w-16 h-16 rounded-full object-cover ring-4 ring-background"
-            />
-          ) : (
-            <div
-              className="w-16 h-16 rounded-full ring-4 ring-background flex items-center justify-center text-white text-xl font-bold select-none"
-              style={{ backgroundColor: color }}
-            >
-              {member.displayName.slice(0, 1)}
+        {/* ── ヘッダーカード ── */}
+        <div className="bg-card rounded-2xl border p-4">
+          <div className="flex items-start gap-3">
+            {member.photoURL ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={member.photoURL}
+                alt={member.displayName}
+                className="w-16 h-16 rounded-full object-cover flex-shrink-0 ring-2 ring-border"
+              />
+            ) : (
+              <div
+                className="w-16 h-16 rounded-full flex-shrink-0 ring-2 ring-border flex items-center justify-center text-white text-xl font-bold select-none"
+                style={{ backgroundColor: color }}
+              >
+                {member.displayName.slice(0, 1)}
+              </div>
+            )}
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold leading-snug">{member.displayName}</h3>
+                  {member.bio && (
+                    <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{member.bio}</p>
+                  )}
+                </div>
+                {!isMe && (
+                  <Button size="sm" className="gap-1.5 flex-shrink-0" onClick={onDM} disabled={dmLoading}>
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    DM
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {member.departmentName && (
+                  <span className="text-xs bg-muted rounded-full px-2.5 py-0.5 text-muted-foreground">
+                    {member.departmentName}
+                  </span>
+                )}
+                {member.role !== "staff" && (
+                  <Badge variant={ROLE_BADGE_VARIANT[member.role] as "default" | "warning"} className="text-[10px]">
+                    {ROLE_LABELS[member.role]}
+                  </Badge>
+                )}
+                <span className="text-xs text-muted-foreground truncate">{member.email}</span>
+              </div>
             </div>
-          )}
-          {!isMe && (
-            <Button size="sm" className="gap-1.5 mb-1" onClick={onDM} disabled={dmLoading}>
-              <MessageSquare className="w-3.5 h-3.5" />
-              DM を送る
-            </Button>
-          )}
+          </div>
         </div>
 
-        <div className="space-y-0.5 mb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-bold">{member.displayName}</h3>
-            {member.role !== "staff" && (
-              <Badge variant={ROLE_BADGE_VARIANT[member.role] as "default" | "warning"} className="text-[10px]">
-                {ROLE_LABELS[member.role]}
-              </Badge>
+        {/* ── About ── */}
+        {member.hobbies && (
+          <div className="bg-card rounded-2xl border p-4">
+            <h4 className="text-sm font-bold text-blue-600 border-b border-border pb-2 mb-3">About</h4>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{member.hobbies}</p>
+          </div>
+        )}
+
+        {/* ── Skills & Tags ── */}
+        {hasSkillsSection && (
+          <div className="bg-card rounded-2xl border p-4 space-y-3">
+            <h4 className="text-sm font-bold text-blue-600 border-b border-border pb-2">Skills &amp; Tags</h4>
+
+            {skillTags.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2">スキル・得意分野</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {skillTags.map((tag) => (
+                    <span key={tag} className="text-xs bg-sky-100 text-sky-700 rounded-full px-2.5 py-0.5">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {canHelpTags.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-amber-500" />
+                  これは私に聞け！
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {canHelpTags.map((tag) => (
+                    <span key={tag} className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {needHelpTags.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                  <HelpCircle className="w-3.5 h-3.5 text-rose-500" />
+                  たすけてほしい！
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {needHelpTags.map((tag) => (
+                    <span key={tag} className="text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2.5 py-0.5">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
-          {member.bio && (
-            <p className="text-xs text-muted-foreground leading-relaxed">{member.bio}</p>
-          )}
-          {member.departmentName && (
-            <p className="text-sm text-muted-foreground">{member.departmentName}</p>
-          )}
-        </div>
+        )}
 
-        <div className="space-y-2.5">
-          <InfoRow icon={<Mail className="w-3.5 h-3.5" />} label="メール">
-            <a href={`mailto:${member.email}`} className="text-primary hover:underline text-sm">
-              {member.email}
-            </a>
-          </InfoRow>
+        {/* ── SNS ── */}
+        {hasSNS && (
+          <div className="bg-card rounded-2xl border p-4">
+            <h4 className="text-sm font-bold text-blue-600 border-b border-border pb-2 mb-3">SNS</h4>
+            <div className="space-y-2">
+              {member.instagramId && (
+                <a
+                  href={`https://www.instagram.com/${member.instagramId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-2.5 hover:bg-muted transition-colors"
+                >
+                  <Instagram className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                  <span>Instagram: {member.instagramId}</span>
+                </a>
+              )}
+              {member.lineId && (
+                <div className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-2.5">
+                  <AtSign className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span>LINE ID: {member.lineId}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-          {member.instagramId && (
-            <InfoRow icon={<Instagram className="w-3.5 h-3.5" />} label="Instagram">
-              <a
-                href={`https://www.instagram.com/${member.instagramId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline text-sm"
-              >
-                @{member.instagramId}
-              </a>
-            </InfoRow>
-          )}
-
-          {member.lineId && (
-            <InfoRow icon={<AtSign className="w-3.5 h-3.5" />} label="LINE ID">
-              <span className="text-sm">{member.lineId}</span>
-            </InfoRow>
-          )}
-
-          {member.hobbies && (
-            <InfoRow icon={<Smile className="w-3.5 h-3.5" />} label="趣味">
-              <p className="text-sm whitespace-pre-wrap">{member.hobbies}</p>
-            </InfoRow>
-          )}
-
-          {member.skills && (
-            <InfoRow icon={<Star className="w-3.5 h-3.5" />} label="特技">
-              <p className="text-sm whitespace-pre-wrap">{member.skills}</p>
-            </InfoRow>
-          )}
-
-          {canHelpTags.length > 0 && (
-            <InfoRow icon={<Target className="w-3.5 h-3.5 text-blue-600" />} label="これは私に聞け！">
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {canHelpTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </InfoRow>
-          )}
-
-          {needHelpTags.length > 0 && (
-            <InfoRow icon={<HelpCircle className="w-3.5 h-3.5 text-rose-500" />} label="たすけてほしい！">
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                {needHelpTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2 py-0.5"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </InfoRow>
-          )}
-
-          {!member.instagramId && !member.lineId && !member.hobbies && !member.skills && canHelpTags.length === 0 && needHelpTags.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-2">
-              プロフィール情報はまだ登録されていません
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <div className="w-5 h-5 rounded-md bg-muted flex items-center justify-center flex-shrink-0 mt-0.5 text-muted-foreground">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">{label}</p>
-        {children}
+        {/* 情報なし */}
+        {!member.hobbies && !hasSkillsSection && !hasSNS && (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            プロフィール情報はまだ登録されていません
+          </p>
+        )}
       </div>
     </div>
   );
