@@ -25,7 +25,7 @@ export const dummyDepts: Department[] = [
 ];
 
 // ── users ──────────────────────────────────────────────────
-const base = { instagramId: null, lineId: null, hobbies: null, skills: null };
+const base = { instagramId: null, lineId: null, hobbies: null, skills: null, canHelp: null, needHelp: null };
 
 export const dummyUsers: AppUser[] = [
   { ...base, uid: "u1", email: "i.kakiuchi@rc-group.co.jp", displayName: "垣内 一郎", photoURL: null, departmentId: "dept-exec", departmentName: "経営管理部", role: "admin", createdAt: ago(30 * day), updatedAt: ago(1 * day) },

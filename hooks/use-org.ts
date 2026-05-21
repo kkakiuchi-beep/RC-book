@@ -50,6 +50,8 @@ export function useOrg() {
                 lineId: data.lineId ?? null,
                 hobbies: data.hobbies ?? null,
                 skills: data.skills ?? null,
+                canHelp: data.canHelp ?? null,
+                needHelp: data.needHelp ?? null,
                 createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
                 updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
               } as AppUser;

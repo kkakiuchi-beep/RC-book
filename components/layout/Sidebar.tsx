@@ -8,13 +8,14 @@ import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Activity, LayoutGrid, Users, FolderOpen, Shield, LogOut, MessageSquare } from "lucide-react";
+import { Activity, LayoutGrid, Users, FolderOpen, Shield, LogOut, MessageSquare, HelpCircle } from "lucide-react";
 import { canAccessAdmin } from "@/lib/permissions";
 
 const NAV_ITEMS = [
   { label: "タイムライン", href: "/timeline", icon: Activity },
   { label: "相談ボード", href: "/board", icon: LayoutGrid },
   { label: "組織図", href: "/org", icon: Users },
+  { label: "相談したい", href: "/consult", icon: HelpCircle },
   { label: "ファイル", href: "/files", icon: FolderOpen },
   { label: "チャット", href: "/chat", icon: MessageSquare },
 ] as const;

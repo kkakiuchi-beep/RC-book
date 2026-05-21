@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, Save, User, Instagram, AtSign } from "lucide-react";
+import { Camera, Save, User, Instagram, AtSign, Target, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
 import type { Department } from "@/lib/types";
@@ -44,6 +44,10 @@ export default function ProfilePage() {
   const [hobbies, setHobbies] = useState("");
   const [skills, setSkills] = useState("");
 
+  // 相談したい
+  const [canHelp, setCanHelp] = useState("");
+  const [needHelp, setNeedHelp] = useState("");
+
   // 写真プレビュー
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -61,6 +65,8 @@ export default function ProfilePage() {
       setLineId(appUser.lineId ?? "");
       setHobbies(appUser.hobbies ?? "");
       setSkills(appUser.skills ?? "");
+      setCanHelp(appUser.canHelp ?? "");
+      setNeedHelp(appUser.needHelp ?? "");
     }
   }, [appUser]);
 
@@ -140,6 +146,8 @@ export default function ProfilePage() {
         lineId: lineId.trim() || null,
         hobbies: hobbies.trim() || null,
         skills: skills.trim() || null,
+        canHelp: canHelp.trim() || null,
+        needHelp: needHelp.trim() || null,
         updatedAt: serverTimestamp(),
       });
 
@@ -167,6 +175,8 @@ export default function ProfilePage() {
     lineId !== (appUser?.lineId ?? "") ||
     hobbies !== (appUser?.hobbies ?? "") ||
     skills !== (appUser?.skills ?? "") ||
+    canHelp !== (appUser?.canHelp ?? "") ||
+    needHelp !== (appUser?.needHelp ?? "") ||
     photoFile !== null;
 
   if (!appUser) {
@@ -363,6 +373,61 @@ export default function ProfilePage() {
             maxLength={200}
           />
           <p className="text-xs text-muted-foreground text-right">{skills.length} / 200</p>
+        </div>
+      </div>
+
+      {/* 相談したい */}
+      <div className="bg-card rounded-xl border p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-muted-foreground">相談したい</h2>
+
+        {/* これは私に聞け！ */}
+        <div className="space-y-1.5">
+          <Label htmlFor="can-help" className="flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5 text-blue-600" />
+            これは私に聞け！
+          </Label>
+          <Input
+            id="can-help"
+            value={canHelp}
+            onChange={(e) => setCanHelp(e.target.value)}
+            placeholder="例: Excel,英会話,動画編集"
+            maxLength={200}
+          />
+          <p className="text-xs text-muted-foreground">カンマ（,）で区切って複数入力できます</p>
+          {canHelp && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {canHelp.split(",").map((t) => t.trim()).filter(Boolean).map((tag) => (
+                <span key={tag} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* たすけてほしい！ */}
+        <div className="space-y-1.5">
+          <Label htmlFor="need-help" className="flex items-center gap-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-rose-500" />
+            たすけてほしい！
+          </Label>
+          <Input
+            id="need-help"
+            value={needHelp}
+            onChange={(e) => setNeedHelp(e.target.value)}
+            placeholder="例: プレゼン,マーケティング,経理"
+            maxLength={200}
+          />
+          <p className="text-xs text-muted-foreground">カンマ（,）で区切って複数入力できます</p>
+          {needHelp && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {needHelp.split(",").map((t) => t.trim()).filter(Boolean).map((tag) => (
+                <span key={tag} className="text-xs bg-rose-50 text-rose-700 border border-rose-200 rounded-full px-2 py-0.5">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
