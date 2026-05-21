@@ -22,7 +22,7 @@ export default function SearchPage() {
   const [input, setInput] = useState(query);
   const [filter, setFilter] = useState<FilterType>("all");
   const router = useRouter();
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
