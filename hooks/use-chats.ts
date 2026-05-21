@@ -8,9 +8,12 @@ import {
   orderBy,
   onSnapshot,
   setDoc,
+  updateDoc,
   doc,
   getDoc,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -39,21 +42,37 @@ export function useChats() {
     const unsub = onSnapshot(
       q,
       (snap) => {
+        // 新着メッセージがあれば hiddenBy から自動解除
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const hiddenBy = (data.hiddenBy as string[]) ?? [];
+          const unread = ((data.unreadCounts as Record<string, number>) ?? {})[appUser.uid] ?? 0;
+          if (hiddenBy.includes(appUser.uid) && unread > 0) {
+            updateDoc(d.ref, { hiddenBy: arrayRemove(appUser.uid) }).catch(() => {});
+          }
+        });
+
         setChats(
-          snap.docs.map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              memberIds: data.memberIds as string[],
-              memberNames: data.memberNames as Record<string, string>,
-              memberPhotoURLs: data.memberPhotoURLs as Record<string, string | null>,
-              lastMessage: (data.lastMessage as string) ?? "",
-              lastMessageAt: (data.lastMessageAt as Timestamp)?.toDate() ?? new Date(),
-              lastMessageBy: (data.lastMessageBy as string) ?? "",
-              unreadCounts: (data.unreadCounts as Record<string, number>) ?? {},
-              createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
-            } as Chat;
-          })
+          snap.docs
+            .filter((d) => {
+              // hiddenBy に自分の uid が含まれているチャットは非表示
+              const hiddenBy = (d.data().hiddenBy as string[]) ?? [];
+              return !hiddenBy.includes(appUser.uid);
+            })
+            .map((d) => {
+              const data = d.data();
+              return {
+                id: d.id,
+                memberIds: data.memberIds as string[],
+                memberNames: data.memberNames as Record<string, string>,
+                memberPhotoURLs: data.memberPhotoURLs as Record<string, string | null>,
+                lastMessage: (data.lastMessage as string) ?? "",
+                lastMessageAt: (data.lastMessageAt as Timestamp)?.toDate() ?? new Date(),
+                lastMessageBy: (data.lastMessageBy as string) ?? "",
+                unreadCounts: (data.unreadCounts as Record<string, number>) ?? {},
+                createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
+              } as Chat;
+            })
         );
         setLoading(false);
       },
@@ -102,5 +121,13 @@ export function useChats() {
     return id;
   };
 
-  return { chats, loading, startChat };
+  /** チャットを自分の一覧から非表示にする（論理削除） */
+  const deleteChat = async (chatId: string) => {
+    if (!appUser) return;
+    await updateDoc(doc(db, "chats", chatId), {
+      hiddenBy: arrayUnion(appUser.uid),
+    });
+  };
+
+  return { chats, loading, startChat, deleteChat };
 }

@@ -2,10 +2,23 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { useChatRoom } from "@/hooks/use-chat-room";
 import { useAuth } from "@/lib/auth";
@@ -15,9 +28,11 @@ export default function ChatRoomPage() {
   const { chatId } = useParams<{ chatId: string }>();
   const router = useRouter();
   const { appUser } = useAuth();
-  const { chat, messages, loading, sendMessage } = useChatRoom(chatId);
+  const { chat, messages, loading, sendMessage, deleteChat } = useChatRoom(chatId);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // 新しいメッセージが来たら一番下へスクロール
@@ -56,15 +71,42 @@ export default function ChatRoomPage() {
     );
   }
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteChat();
+      router.push("/chat");
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-7rem)]">
+    <div className="flex flex-col h-[calc(100dvh-8rem)] md:h-[calc(100dvh-7rem)]">
       {/* ヘッダー */}
       <div className="flex items-center gap-3 pb-4 border-b mb-4 flex-shrink-0">
         <Button variant="ghost" size="icon" className="w-8 h-8 -ml-1" onClick={() => router.push("/chat")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <UserAvatar name={otherName} uid={otherUid} photoURL={otherPhoto} size="sm" />
-        <p className="font-semibold text-sm">{otherName}</p>
+        <p className="font-semibold text-sm flex-1 min-w-0 truncate">{otherName}</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground flex-shrink-0">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="gap-2 text-destructive focus:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              チャットを削除
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* メッセージ一覧 */}
@@ -113,6 +155,26 @@ export default function ChatRoomPage() {
           <Send className="w-4 h-4" />
         </Button>
       </form>
+
+      {/* 削除確認ダイアログ */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>チャットを削除しますか？</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            あなたのチャット一覧から削除されます。相手には影響しません。新しいメッセージが届くと自動的に復元されます。
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              キャンセル
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "削除中..." : "削除する"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

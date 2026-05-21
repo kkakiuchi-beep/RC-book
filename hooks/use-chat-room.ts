@@ -11,6 +11,8 @@ import {
   updateDoc,
   doc,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -103,17 +105,26 @@ export function useChatRoom(chatId: string) {
       content: content.trim(),
       createdAt: serverTimestamp(),
     });
-    // チャットの最終メッセージを更新・相手の未読数を+1
+    // チャットの最終メッセージを更新・相手の未読数を+1・自分の hiddenBy を解除
     const otherUid = chat?.memberIds.find((id) => id !== appUser.uid) ?? "";
     await updateDoc(doc(db, "chats", chatId), {
       lastMessage: content.trim(),
       lastMessageAt: serverTimestamp(),
       lastMessageBy: appUser.uid,
+      hiddenBy: arrayRemove(appUser.uid),
       ...(otherUid
         ? { [`unreadCounts.${otherUid}`]: (chat?.unreadCounts[otherUid] ?? 0) + 1 }
         : {}),
     });
   };
 
-  return { chat, messages, loading, sendMessage };
+  /** チャットを自分の一覧から非表示にする（論理削除） */
+  const deleteChat = async () => {
+    if (!appUser) return;
+    await updateDoc(doc(db, "chats", chatId), {
+      hiddenBy: arrayUnion(appUser.uid),
+    });
+  };
+
+  return { chat, messages, loading, sendMessage, deleteChat };
 }

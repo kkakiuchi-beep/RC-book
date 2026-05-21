@@ -147,18 +147,18 @@ export default function ProfilePage() {
   return (
     <div className="space-y-3 max-w-2xl">
       {/* ── プロフィールヘッダー ── */}
-      <div className="bg-card rounded-2xl border p-5">
-        <div className="flex items-start gap-4">
+      <div className="bg-card rounded-2xl border p-4 sm:p-5">
+        <div className="flex items-start gap-3">
           {/* Googleアカウントのアイコン（変更不可） */}
           {appUser.photoURL ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={appUser.photoURL}
               alt={appUser.displayName}
-              className="w-20 h-20 rounded-full object-cover flex-shrink-0 ring-2 ring-border"
+              className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0 ring-2 ring-border"
             />
           ) : (
-            <div className="w-20 h-20 flex-shrink-0">
+            <div className="w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0">
               <UserAvatar name={appUser.displayName} uid={appUser.uid} size="lg" />
             </div>
           )}
@@ -166,7 +166,7 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h1 className="text-xl font-bold">{appUser.displayName}</h1>
+                <h1 className="text-lg sm:text-xl font-bold leading-snug">{appUser.displayName}</h1>
                 {appUser.bio && (
                   <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
                     {appUser.bio}

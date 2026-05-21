@@ -103,29 +103,29 @@ export default function ConsultPage() {
           type="button"
           onClick={() => setMode("canHelp")}
           className={cn(
-            "rounded-xl border-2 p-5 text-center transition-all",
+            "rounded-xl border-2 p-3 sm:p-5 text-center transition-all",
             mode === "canHelp"
               ? "border-blue-400 bg-blue-50"
               : "border-border bg-card hover:bg-secondary/50"
           )}
         >
-          <Target className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-          <p className="font-bold text-sm">これは私に聞け！</p>
-          <p className="text-xs text-muted-foreground mt-0.5">みんなが答えられること</p>
+          <Target className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1.5 text-blue-500" />
+          <p className="font-bold text-xs sm:text-sm">これは私に聞け！</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5 hidden sm:block">みんなが答えられること</p>
         </button>
         <button
           type="button"
           onClick={() => setMode("needHelp")}
           className={cn(
-            "rounded-xl border-2 p-5 text-center transition-all",
+            "rounded-xl border-2 p-3 sm:p-5 text-center transition-all",
             mode === "needHelp"
               ? "border-rose-400 bg-rose-50"
               : "border-border bg-card hover:bg-secondary/50"
           )}
         >
-          <HelpCircle className="w-8 h-8 mx-auto mb-2 text-rose-500" />
-          <p className="font-bold text-sm">たすけてほしい！</p>
-          <p className="text-xs text-muted-foreground mt-0.5">みんなが困っていること</p>
+          <HelpCircle className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1.5 text-rose-500" />
+          <p className="font-bold text-xs sm:text-sm">たすけてほしい！</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5 hidden sm:block">みんなが困っていること</p>
         </button>
       </div>
 
@@ -209,7 +209,7 @@ export default function ConsultPage() {
 
       {/* タグ詳細ダイアログ */}
       <Dialog open={!!selectedTag} onOpenChange={(o) => !o && setSelectedTag(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-sm w-[calc(100vw-2rem)]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {mode === "canHelp" ? (

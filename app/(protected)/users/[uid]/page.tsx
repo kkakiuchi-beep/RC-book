@@ -106,17 +106,17 @@ export default function UserProfilePage() {
       </Button>
 
       {/* ── ヘッダーカード ── */}
-      <div className="bg-card rounded-2xl border p-5">
-        <div className="flex items-start gap-4">
+      <div className="bg-card rounded-2xl border p-4 sm:p-5">
+        <div className="flex items-start gap-3">
           {user.photoURL ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.photoURL}
               alt={user.displayName}
-              className="w-20 h-20 rounded-full object-cover flex-shrink-0 ring-2 ring-border"
+              className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover flex-shrink-0 ring-2 ring-border"
             />
           ) : (
-            <div className="w-20 h-20 rounded-full flex-shrink-0 ring-2 ring-border flex items-center justify-center bg-muted text-2xl font-bold">
+            <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full flex-shrink-0 ring-2 ring-border flex items-center justify-center bg-muted text-xl sm:text-2xl font-bold">
               {user.displayName.slice(0, 1)}
             </div>
           )}
@@ -124,9 +124,9 @@ export default function UserProfilePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h1 className="text-xl font-bold">{user.displayName}</h1>
+                <h1 className="text-lg sm:text-xl font-bold leading-snug">{user.displayName}</h1>
                 {user.bio && (
-                  <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                  <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
                     {user.bio}
                   </p>
                 )}
@@ -139,7 +139,8 @@ export default function UserProfilePage() {
                   disabled={dmLoading}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
-                  DM を送る
+                  <span className="hidden xs:inline">DM を送る</span>
+                  <span className="xs:hidden">DM</span>
                 </Button>
               )}
             </div>
@@ -152,7 +153,7 @@ export default function UserProfilePage() {
               <Badge variant={ROLE_BADGE_VARIANT[user.role] as "default" | "warning"}>
                 {ROLE_LABELS[user.role]}
               </Badge>
-              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+              <span className="text-xs text-muted-foreground break-all">{user.email}</span>
             </div>
           </div>
         </div>

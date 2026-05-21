@@ -1,8 +1,17 @@
 "use client";
 
-import { MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { useChats } from "@/hooks/use-chats";
@@ -11,7 +20,20 @@ import { relativeTime, cn } from "@/lib/utils";
 
 export default function ChatPage() {
   const { appUser } = useAuth();
-  const { chats, loading } = useChats();
+  const { chats, loading, deleteChat } = useChats();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
+    try {
+      await deleteChat(deleteTargetId);
+    } finally {
+      setDeleting(false);
+      setDeleteTargetId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -51,40 +73,69 @@ export default function ChatPage() {
             const otherPhoto = chat.memberPhotoURLs[otherUid] ?? null;
             const unread = (appUser ? chat.unreadCounts[appUser.uid] : 0) ?? 0;
             return (
-              <Link
-                key={chat.id}
-                href={`/chat/${chat.id}`}
-                className="flex items-center gap-3 bg-card rounded-xl border px-4 py-3.5 hover:bg-secondary/50 transition-colors"
-              >
-                <UserAvatar name={otherName} uid={otherUid} photoURL={otherPhoto} size="md" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className={cn("text-sm truncate", unread > 0 ? "font-semibold" : "font-medium")}>
-                      {otherName}
-                    </p>
-                    <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2">
-                      {relativeTime(chat.lastMessageAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p className={cn(
-                      "text-xs truncate",
-                      unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"
-                    )}>
-                      {chat.lastMessage || "まだメッセージはありません"}
-                    </p>
-                    {unread > 0 && (
-                      <span className="flex-shrink-0 ml-2 min-w-[20px] h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1.5">
-                        {unread > 99 ? "99+" : unread}
+              <div key={chat.id} className="flex items-center bg-card rounded-xl border overflow-hidden">
+                <Link
+                  href={`/chat/${chat.id}`}
+                  className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3.5 hover:bg-secondary/50 transition-colors"
+                >
+                  <UserAvatar name={otherName} uid={otherUid} photoURL={otherPhoto} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className={cn("text-sm truncate", unread > 0 ? "font-semibold" : "font-medium")}>
+                        {otherName}
+                      </p>
+                      <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2">
+                        {relativeTime(chat.lastMessageAt)}
                       </span>
-                    )}
+                    </div>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className={cn(
+                        "text-xs truncate",
+                        unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"
+                      )}>
+                        {chat.lastMessage || "まだメッセージはありません"}
+                      </p>
+                      {unread > 0 && (
+                        <span className="flex-shrink-0 ml-2 min-w-[20px] h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1.5">
+                          {unread > 99 ? "99+" : unread}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  className="px-3 py-3.5 text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors flex-shrink-0 self-stretch flex items-center border-l"
+                  onClick={() => setDeleteTargetId(chat.id)}
+                  aria-label="チャットを削除"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* 削除確認ダイアログ */}
+      <Dialog open={!!deleteTargetId} onOpenChange={(o) => !o && setDeleteTargetId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>チャットを削除しますか？</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            あなたのチャット一覧から削除されます。相手には影響しません。新しいメッセージが届くと自動的に復元されます。
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTargetId(null)}>
+              キャンセル
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "削除中..." : "削除する"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
