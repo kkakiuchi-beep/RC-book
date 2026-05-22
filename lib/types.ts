@@ -21,6 +21,7 @@ export interface AppUser {
   canHelp: string | null;   // カンマ区切り「これは私に聞け！」
   needHelp: string | null;  // カンマ区切り「たすけてほしい！」
   joinedAt: Date | null;    // 入社年月（月初 Date）
+  birthday: Date | null;    // 誕生日
   createdAt: Date;
   updatedAt: Date;
 }

@@ -21,11 +21,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Pencil, Save, X, Instagram, AtSign, Target, HelpCircle, CalendarDays,
+  Pencil, Save, X, Instagram, AtSign, Target, HelpCircle, CalendarDays, Cake,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
-import { formatJoinedAt } from "@/lib/utils";
+import { formatJoinedAt, formatBirthday } from "@/lib/utils";
 import type { Department } from "@/lib/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -54,6 +54,9 @@ export default function ProfilePage() {
   const [lineId, setLineId] = useState("");
   const [joinYear, setJoinYear] = useState<string>("");
   const [joinMonth, setJoinMonth] = useState<string>("");
+  const [birthYear, setBirthYear] = useState<string>("");
+  const [birthMonth, setBirthMonth] = useState<string>("");
+  const [birthDay, setBirthDay] = useState<string>("");
   const [depts, setDepts] = useState<Department[]>([]);
   const [deptsLoading, setDeptsLoading] = useState(true);
 
@@ -71,6 +74,9 @@ export default function ProfilePage() {
       setLineId(appUser.lineId ?? "");
       setJoinYear(appUser.joinedAt ? String(appUser.joinedAt.getFullYear()) : "");
       setJoinMonth(appUser.joinedAt ? String(appUser.joinedAt.getMonth() + 1) : "");
+      setBirthYear(appUser.birthday ? String(appUser.birthday.getFullYear()) : "");
+      setBirthMonth(appUser.birthday ? String(appUser.birthday.getMonth() + 1) : "");
+      setBirthDay(appUser.birthday ? String(appUser.birthday.getDate()) : "");
     }
   }, [appUser]);
 
@@ -116,6 +122,12 @@ export default function ProfilePage() {
           ? new Date(Number(joinYear), Number(joinMonth) - 1, 1)
           : null;
 
+      // 誕生日 → Date に変換
+      const birthdayDate =
+        birthYear && birthMonth && birthDay
+          ? new Date(Number(birthYear), Number(birthMonth) - 1, Number(birthDay))
+          : null;
+
       // Firestore 更新
       await updateDoc(doc(db, "users", appUser.uid), {
         displayName: displayName.trim(),
@@ -129,6 +141,7 @@ export default function ProfilePage() {
         instagramId: instagramId.trim() || null,
         lineId: lineId.trim() || null,
         joinedAt: joinedAtDate,
+        birthday: birthdayDate,
         updatedAt: serverTimestamp(),
       });
 
@@ -226,6 +239,12 @@ export default function ProfilePage() {
                 {formatJoinedAt(appUser.joinedAt)}
               </p>
             )}
+            {appUser.birthday && (
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                <Cake className="w-3 h-3 flex-shrink-0" />
+                {formatBirthday(appUser.birthday)}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -309,6 +328,67 @@ export default function ProfilePage() {
             {joinYear && joinMonth && (
               <p className="text-xs text-muted-foreground">
                 {formatJoinedAt(new Date(Number(joinYear), Number(joinMonth) - 1, 1))}
+              </p>
+            )}
+          </div>
+
+          {/* 誕生日 */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Cake className="w-3.5 h-3.5 text-muted-foreground" />
+              誕生日
+            </Label>
+            <div className="flex gap-2">
+              <select
+                value={birthYear}
+                onChange={(e) => {
+                  setBirthYear(e.target.value);
+                  // 月・日が選択済みの場合、その月の最大日数を超えていたらリセット
+                  if (birthMonth && birthDay) {
+                    const max = new Date(Number(e.target.value), Number(birthMonth), 0).getDate();
+                    if (Number(birthDay) > max) setBirthDay(String(max));
+                  }
+                }}
+                className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">年を選択</option>
+                {Array.from({ length: CURRENT_YEAR - 1950 + 1 }, (_, i) => CURRENT_YEAR - i).map((y) => (
+                  <option key={y} value={y}>{y}年</option>
+                ))}
+              </select>
+              <select
+                value={birthMonth}
+                onChange={(e) => {
+                  setBirthMonth(e.target.value);
+                  if (birthDay) {
+                    const max = new Date(Number(birthYear) || 2000, Number(e.target.value), 0).getDate();
+                    if (Number(birthDay) > max) setBirthDay(String(max));
+                  }
+                }}
+                className="w-24 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">月</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>{m}月</option>
+                ))}
+              </select>
+              <select
+                value={birthDay}
+                onChange={(e) => setBirthDay(e.target.value)}
+                className="w-24 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">日</option>
+                {Array.from(
+                  { length: birthMonth ? new Date(Number(birthYear) || 2000, Number(birthMonth), 0).getDate() : 31 },
+                  (_, i) => i + 1
+                ).map((d) => (
+                  <option key={d} value={d}>{d}日</option>
+                ))}
+              </select>
+            </div>
+            {birthYear && birthMonth && birthDay && (
+              <p className="text-xs text-muted-foreground">
+                {formatBirthday(new Date(Number(birthYear), Number(birthMonth) - 1, Number(birthDay)))}
               </p>
             )}
           </div>
