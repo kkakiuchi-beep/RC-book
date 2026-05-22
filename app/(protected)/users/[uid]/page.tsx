@@ -36,6 +36,7 @@ function mapDocToUser(uid: string, d: Record<string, unknown>): AppUser {
     bio: (d.bio as string | null) ?? null,
     canHelp: (d.canHelp as string | null) ?? null,
     needHelp: (d.needHelp as string | null) ?? null,
+    joinedAt: (d.joinedAt as Timestamp)?.toDate() ?? null,
     createdAt: (d.createdAt as Timestamp)?.toDate() ?? new Date(),
     updatedAt: (d.updatedAt as Timestamp)?.toDate() ?? new Date(),
   };
