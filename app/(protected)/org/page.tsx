@@ -372,94 +372,115 @@ function BubbleChart({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+      <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
         読み込み中...
       </div>
     );
   }
 
-  const CX = 400;
-  const CY = 310;
-  const LAYOUT_R = 195;
+  const n = topDepts.length;
+  // 部署数に応じてレイアウト半径を調整（viewBox 400×400、中心200,200）
+  // 制約: LAYOUT_R + getBubbleR(max) + BADGE_R < 200
+  const LAYOUT_R = n <= 3 ? 118 : n <= 5 ? 128 : n <= 7 ? 138 : 146;
+  const CENTER_R = 44;
+  const BADGE_R = 11;
+  const FONT_SIZE = 10;
+  const BADGE_FONT = 9;
+  const LINE_H = 13;
 
-  function wrapText(text: string, maxLen = 5): string[] {
+  const getBubbleR = (count: number) => 26 + Math.sqrt(count) * 6;
+
+  const wrapText = (text: string, maxLen = 4): string[] => {
     const lines: string[] = [];
     for (let i = 0; i < text.length; i += maxLen) {
       lines.push(text.slice(i, i + maxLen));
     }
     return lines;
-  }
+  };
 
   return (
     <div className="w-full">
-      <p className="text-xs text-center text-muted-foreground mb-1">
-        部署をクリックするとメンバーを確認できます
+      <p className="text-xs text-center text-muted-foreground mb-2">
+        部署をタップするとメンバーを確認できます
       </p>
-      <svg
-        viewBox="0 0 800 620"
-        className="w-full"
-        style={{ maxHeight: "65vh" }}
-      >
-        {topDepts.map((dept, i) => {
-          const angle = (i / topDepts.length) * 2 * Math.PI - Math.PI / 2;
-          const count = memberCounts[dept.id] ?? 0;
-          const bubbleR = 42 + Math.sqrt(count) * 9;
-          const x = CX + LAYOUT_R * Math.cos(angle);
-          const y = CY + LAYOUT_R * Math.sin(angle);
-          const color = DEPT_COLORS[i % DEPT_COLORS.length];
-          const lines = wrapText(dept.name);
-          const lineH = 14;
-          const totalH = lines.length * lineH;
-          const badgeX = x + Math.cos(Math.PI / 4) * bubbleR;
-          const badgeY = y + Math.sin(Math.PI / 4) * bubbleR;
+      {/* min(100%, 480px): モバイルは全幅・PCは480px上限で中央揃え */}
+      <div className="flex justify-center">
+        <svg
+          viewBox="0 0 400 400"
+          style={{ width: "min(100%, 480px)", height: "auto" }}
+          aria-label="組織図バブルチャート"
+        >
+          {topDepts.map((dept, i) => {
+            const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+            const count = memberCounts[dept.id] ?? 0;
+            const bubbleR = getBubbleR(count);
+            const cx = 200 + LAYOUT_R * Math.cos(angle);
+            const cy = 200 + LAYOUT_R * Math.sin(angle);
+            const color = DEPT_COLORS[i % DEPT_COLORS.length];
+            const lines = wrapText(dept.name);
+            const totalH = lines.length * LINE_H;
+            // バッジは45°方向（右下）に配置
+            const bx = cx + Math.cos(Math.PI / 4) * bubbleR;
+            const by = cy + Math.sin(Math.PI / 4) * bubbleR;
 
-          return (
-            <g key={dept.id} onClick={() => onDeptClick(dept.id)} style={{ cursor: "pointer" }}>
-              <circle cx={x} cy={y} r={bubbleR} fill={color} />
-              {lines.map((line, li) => (
+            return (
+              <g
+                key={dept.id}
+                onClick={() => onDeptClick(dept.id)}
+                style={{ cursor: "pointer" }}
+                role="button"
+                aria-label={`${dept.name} ${count}名`}
+              >
+                <circle cx={cx} cy={cy} r={bubbleR} fill={color} />
+                {lines.map((line, li) => (
+                  <text
+                    key={li}
+                    x={cx}
+                    y={cy - totalH / 2 + LINE_H * li + LINE_H * 0.65}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="white"
+                    fontSize={FONT_SIZE}
+                    fontWeight="700"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {line}
+                  </text>
+                ))}
+                {/* メンバー数バッジ */}
+                <circle cx={bx} cy={by} r={BADGE_R} fill="white" />
                 <text
-                  key={li}
-                  x={x}
-                  y={y - totalH / 2 + lineH * li + lineH * 0.5}
+                  x={bx}
+                  y={by}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill="white"
-                  fontSize={12}
-                  fontWeight="600"
+                  fill={color}
+                  fontSize={BADGE_FONT}
+                  fontWeight="bold"
+                  style={{ pointerEvents: "none", userSelect: "none" }}
                 >
-                  {line}
+                  {count}
                 </text>
-              ))}
-              <circle cx={badgeX} cy={badgeY} r={13} fill="white" opacity={0.95} />
-              <text
-                x={badgeX}
-                y={badgeY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill={color}
-                fontSize={10}
-                fontWeight="bold"
-              >
-                {count}
-              </text>
-            </g>
-          );
-        })}
+              </g>
+            );
+          })}
 
-        {/* 中央ラベル */}
-        <circle cx={CX} cy={CY} r={68} fill="#3B5BA5" />
-        <text
-          x={CX}
-          y={CY}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill="white"
-          fontSize={17}
-          fontWeight="bold"
-        >
-          組織図
-        </text>
-      </svg>
+          {/* 中央ラベル */}
+          <circle cx={200} cy={200} r={CENTER_R} fill="#3B5BA5" />
+          <text
+            x={200}
+            y={200}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="white"
+            fontSize={13}
+            fontWeight="bold"
+            style={{ pointerEvents: "none", userSelect: "none" }}
+          >
+            組織図
+          </text>
+        </svg>
+      </div>
     </div>
   );
 }
