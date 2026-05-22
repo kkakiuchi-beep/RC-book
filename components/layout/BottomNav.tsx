@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { Activity, LayoutGrid, Users, MessageSquare, Shield, HelpCircle } from "lucide-react";
+import { Activity, LayoutGrid, Users, MessageSquare, Shield, HelpCircle, FolderOpen } from "lucide-react";
 import { canAccessAdmin } from "@/lib/permissions";
 
 const BASE_ITEMS = [
   { label: "タイムライン", href: "/timeline", icon: Activity },
   { label: "掲示板", href: "/board", icon: LayoutGrid },
   { label: "組織図", href: "/org", icon: Users },
+  { label: "ファイル", href: "/files", icon: FolderOpen },
   { label: "相談", href: "/consult", icon: HelpCircle },
   { label: "チャット", href: "/chat", icon: MessageSquare },
 ] as const;
