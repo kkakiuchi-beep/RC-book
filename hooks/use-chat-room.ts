@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
+import { createNotification } from "@/lib/notification";
 import type { Chat, ChatMessage } from "@/lib/types";
 
 export function useChatRoom(chatId: string) {
@@ -107,15 +108,29 @@ export function useChatRoom(chatId: string) {
     });
     // チャットの最終メッセージを更新・相手の未読数を+1・自分の hiddenBy を解除
     const otherUid = chat?.memberIds.find((id) => id !== appUser.uid) ?? "";
+    const otherUnread = chat?.unreadCounts[otherUid] ?? 0;
     await updateDoc(doc(db, "chats", chatId), {
       lastMessage: content.trim(),
       lastMessageAt: serverTimestamp(),
       lastMessageBy: appUser.uid,
       hiddenBy: arrayRemove(appUser.uid),
       ...(otherUid
-        ? { [`unreadCounts.${otherUid}`]: (chat?.unreadCounts[otherUid] ?? 0) + 1 }
+        ? { [`unreadCounts.${otherUid}`]: otherUnread + 1 }
         : {}),
     });
+    // 相手の未読が 0 → 1 になるときだけ通知（連続送信で重複させない）
+    if (otherUid && otherUnread === 0) {
+      await createNotification({
+        userId: otherUid,
+        type: "dm",
+        message: `${appUser.displayName}さんからDMが届きました`,
+        relatedId: chatId,
+        relatedPath: `/chat/${chatId}`,
+        fromUserId: appUser.uid,
+        fromUserName: appUser.displayName,
+        fromUserPhotoURL: appUser.photoURL ?? null,
+      });
+    }
   };
 
   /** チャットを自分の一覧から非表示にする（論理削除） */
