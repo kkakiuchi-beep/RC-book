@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
-import type { DriveFileMime, Department } from "@/lib/types";
+import type { DriveFileMime, Department, DriveLink } from "@/lib/types";
 import type { useFiles } from "@/hooks/use-files";
 
 const MIME_OPTIONS: { label: string; value: DriveFileMime }[] = [
@@ -32,10 +32,21 @@ interface AddFileDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSubmit: ReturnType<typeof useFiles>["addFile"];
+  /** 編集モード：対象ファイル */
+  initial?: DriveLink | null;
+  /** 編集モード：更新コールバック */
+  onUpdate?: ReturnType<typeof useFiles>["updateFile"];
 }
 
-export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogProps) {
+export function AddFileDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  initial,
+  onUpdate,
+}: AddFileDialogProps) {
   const { appUser } = useAuth();
+  const isEditMode = !!initial;
 
   const [depts, setDepts] = useState<Department[]>([]);
   const [deptsLoading, setDeptsLoading] = useState(true);
@@ -46,6 +57,7 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
   const [departmentId, setDepartmentId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // 部署一覧を取得
   useEffect(() => {
     getDocs(query(collection(db, "departments"), orderBy("order", "asc")))
       .then((snap) => {
@@ -62,6 +74,16 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
       .finally(() => setDeptsLoading(false));
   }, []);
 
+  // 編集モード: initial が変わったらフォームを初期化
+  useEffect(() => {
+    if (initial) {
+      setTitle(initial.title);
+      setUrl(initial.driveUrl);
+      setMimeType(initial.mimeType);
+      setDepartmentId(initial.departmentId ?? "");
+    }
+  }, [initial]);
+
   if (!appUser) return null;
 
   const reset = () => {
@@ -77,19 +99,20 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
     setSubmitting(true);
     try {
       const dept = depts.find((d) => d.id === departmentId);
-      await onSubmit(
-        title.trim(),
-        url.trim(),
-        mimeType,
-        departmentId || null,
-        dept?.name ?? null,
-        appUser
-      );
-      toast.success("ファイルを追加しました");
+      const deptId = departmentId || null;
+      const deptName = dept?.name ?? null;
+
+      if (isEditMode && onUpdate && initial) {
+        await onUpdate(initial.id, title.trim(), url.trim(), mimeType, deptId, deptName);
+        toast.success("ファイルを更新しました");
+      } else {
+        await onSubmit(title.trim(), url.trim(), mimeType, deptId, deptName, appUser);
+        toast.success("ファイルを追加しました");
+      }
       reset();
       onOpenChange(false);
     } catch {
-      toast.error("追加に失敗しました");
+      toast.error(isEditMode ? "更新に失敗しました" : "追加に失敗しました");
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +126,7 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>ファイルを追加</DialogTitle>
+          <DialogTitle>{isEditMode ? "ファイルを編集" : "ファイルを追加"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -182,7 +205,9 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
               キャンセル
             </Button>
             <Button type="submit" disabled={submitting || !title.trim() || !url.trim()}>
-              {submitting ? "追加中..." : "追加する"}
+              {submitting
+                ? isEditMode ? "更新中..." : "追加中..."
+                : isEditMode ? "更新する" : "追加する"}
             </Button>
           </DialogFooter>
         </form>

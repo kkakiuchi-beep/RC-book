@@ -5,6 +5,9 @@ import {
   collection,
   getDocs,
   addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   query,
   orderBy,
   serverTimestamp,
@@ -73,5 +76,28 @@ export function useFiles() {
     await fetchFiles();
   };
 
-  return { files, loading, addFile, refetch: fetchFiles };
+  const updateFile = async (
+    id: string,
+    title: string,
+    driveUrl: string,
+    mimeType: DriveFileMime,
+    departmentId: string | null,
+    departmentName: string | null
+  ) => {
+    await updateDoc(doc(db, "driveLinks", id), {
+      title,
+      driveUrl,
+      mimeType,
+      departmentId,
+      departmentName,
+    });
+    await fetchFiles();
+  };
+
+  const deleteFile = async (id: string) => {
+    await deleteDoc(doc(db, "driveLinks", id));
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  return { files, loading, addFile, updateFile, deleteFile, refetch: fetchFiles };
 }

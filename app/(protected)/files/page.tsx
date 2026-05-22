@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   FileText, FileSpreadsheet, Presentation, FolderOpen,
   FileImage, Plus, ExternalLink, FolderOpen as FolderIcon,
+  Pencil, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -12,8 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { AddFileDialog } from "@/components/files/AddFileDialog";
 import { useFiles } from "@/hooks/use-files";
 import { useAuth } from "@/lib/auth";
+import { canAccessAdmin } from "@/lib/permissions";
 import { relativeTime } from "@/lib/utils";
-import type { DriveFileMime } from "@/lib/types";
+import { toast } from "sonner";
+import type { DriveFileMime, DriveLink } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 
 interface MimeConfig {
@@ -36,15 +39,31 @@ const MIME_CONFIG: Record<DriveFileMime, MimeConfig> = {
 
 export default function FilesPage() {
   const { appUser } = useAuth();
-  const { files, loading, addFile } = useFiles();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { files, loading, addFile, updateFile, deleteFile } = useFiles();
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingFile, setEditingFile] = useState<DriveLink | null>(null);
+
+  // 編集・削除の権限チェック（追加者本人 or 管理者）
+  const canEdit = (file: DriveLink) =>
+    !!appUser && (appUser.uid === file.addedBy || canAccessAdmin(appUser));
+
+  const handleDelete = async (file: DriveLink) => {
+    if (!confirm(`「${file.title}」を削除しますか？`)) return;
+    try {
+      await deleteFile(file.id);
+      toast.success("削除しました");
+    } catch {
+      toast.error("削除に失敗しました");
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">ファイル</h1>
         {appUser && (
-          <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
+          <Button size="sm" className="gap-2" onClick={() => setAddDialogOpen(true)}>
             <Plus className="w-4 h-4" />
             追加
           </Button>
@@ -55,7 +74,7 @@ export default function FilesPage() {
         <div className="bg-card rounded-xl border divide-y">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex items-center gap-3 px-4 py-3.5">
-              <Skeleton className="w-9 h-9 rounded-lg" />
+              <Skeleton className="w-9 h-9 rounded-lg flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-32" />
@@ -66,58 +85,95 @@ export default function FilesPage() {
       )}
 
       {!loading && files.length === 0 && (
-        <EmptyState icon={FolderIcon} title="ファイルがありません" description="Google Drive のリンクを追加しましょう" />
+        <EmptyState
+          icon={FolderIcon}
+          title="ファイルがありません"
+          description="Google Drive のリンクを追加しましょう"
+        />
       )}
 
       {!loading && files.length > 0 && (
         <div className="bg-card rounded-xl border overflow-hidden">
-          {/* ヘッダー (PC のみ) */}
-          <div className="hidden md:grid grid-cols-[1fr_7rem_8rem] gap-4 px-4 py-2.5 border-b bg-secondary/40 text-xs font-medium text-muted-foreground">
-            <span>名前</span>
-            <span>部署</span>
-            <span>追加日</span>
+          {/* PC ヘッダー */}
+          <div className="hidden md:flex items-center px-4 py-2.5 border-b bg-secondary/40 text-xs font-medium text-muted-foreground gap-4">
+            <span className="flex-1">名前</span>
+            <span className="w-24">部署</span>
+            <span className="w-20">追加日</span>
+            <span className="w-14" />
           </div>
 
           <ul className="divide-y">
             {files.map((file) => {
               const cfg = MIME_CONFIG[file.mimeType];
               const Icon = cfg.icon;
+              const editable = canEdit(file);
+
               return (
-                <li key={file.id}>
+                <li key={file.id} className="group flex items-center gap-2 px-4 py-3 hover:bg-secondary/50 transition-colors">
+
+                  {/* リンクエリア（flex-1） */}
                   <a
                     href={file.driveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex md:grid md:grid-cols-[1fr_7rem_8rem] items-center gap-3 md:gap-4 px-4 py-3.5 hover:bg-secondary/50 transition-colors"
+                    className="flex flex-1 items-center gap-3 min-w-0"
                   >
-                    {/* アイコン + タイトル */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.bgColor}`}>
-                        <Icon className={`w-4 h-4 ${cfg.color}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{file.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 md:hidden">
-                          {file.departmentName ?? "全社"} · {relativeTime(file.createdAt)}
-                        </p>
-                      </div>
+                    {/* ファイルアイコン */}
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.bgColor}`}>
+                      <Icon className={`w-4 h-4 ${cfg.color}`} />
                     </div>
 
-                    {/* PC: 部署 */}
-                    <div className="hidden md:block">
-                      {file.departmentName ? (
-                        <Badge variant="secondary" className="text-xs">{file.departmentName}</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">全社</span>
-                      )}
+                    {/* タイトル + メタ */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate leading-snug">{file.title}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {/* 部署バッジ（常時表示） */}
+                        {file.departmentName ? (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {file.departmentName}
+                          </Badge>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">全社</span>
+                        )}
+                        {/* 日付（モバイルのみ） */}
+                        <span className="text-[10px] text-muted-foreground md:hidden">
+                          · {relativeTime(file.createdAt)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* PC: 日付 */}
-                    <div className="hidden md:flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{relativeTime(file.createdAt)}</span>
-                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-                    </div>
+                    <span className="hidden md:block text-xs text-muted-foreground w-20 flex-shrink-0">
+                      {relativeTime(file.createdAt)}
+                    </span>
+
+                    {/* 外部リンクアイコン */}
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 hidden sm:block" />
                   </a>
+
+                  {/* 編集・削除ボタン（権限あるユーザーのみ） */}
+                  {editable && (
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7 text-muted-foreground hover:text-foreground opacity-60 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setEditingFile(file)}
+                        title="編集"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDelete(file)}
+                        title="削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -125,7 +181,21 @@ export default function FilesPage() {
         </div>
       )}
 
-      <AddFileDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmit={addFile} />
+      {/* 追加ダイアログ */}
+      <AddFileDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSubmit={addFile}
+      />
+
+      {/* 編集ダイアログ */}
+      <AddFileDialog
+        open={!!editingFile}
+        onOpenChange={(v) => { if (!v) setEditingFile(null); }}
+        onSubmit={addFile}
+        initial={editingFile}
+        onUpdate={updateFile}
+      />
     </div>
   );
 }
