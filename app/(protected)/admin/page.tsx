@@ -441,9 +441,18 @@ export default function AdminPage() {
               departmentId: data.departmentId ?? null,
               departmentName: data.departmentName ?? null,
               role: data.role ?? "staff",
+              bio: data.bio ?? null,
+              instagramId: data.instagramId ?? null,
+              lineId: data.lineId ?? null,
+              hobbies: data.hobbies ?? null,
+              skills: data.skills ?? null,
+              canHelp: data.canHelp ?? null,
+              needHelp: data.needHelp ?? null,
+              joinedAt: (data.joinedAt as Timestamp)?.toDate() ?? null,
+              birthday: (data.birthday as string | null) ?? null,
               createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
               updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
-            } as AppUser;
+            } satisfies AppUser;
           })
         );
       }
@@ -646,15 +655,16 @@ export default function AdminPage() {
                         <p className="text-xs text-muted-foreground">{u.departmentName}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 gap-1 text-xs"
+                        className="h-7 w-7 p-0 sm:w-auto sm:px-2 sm:gap-1"
                         onClick={() => { setEditingUser(u); setUserEditDialog(true); }}
+                        title="部署を変更"
                       >
                         <UserCog className="w-3.5 h-3.5" />
-                        部署
+                        <span className="hidden sm:inline text-xs">部署</span>
                       </Button>
                       {isAdminUser && u.uid !== appUser?.uid && (
                         <RoleDropdown user={u} onChangeRole={changeRole} />

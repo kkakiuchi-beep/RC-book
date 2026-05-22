@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, MessageSquare, Instagram, AtSign, Target, HelpCircle,
+  ArrowLeft, MessageSquare, Instagram, AtSign, Target, HelpCircle, CalendarDays, Cake,
 } from "lucide-react";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
+import { formatJoinedAt, formatBirthday } from "@/lib/utils";
 import type { AppUser } from "@/lib/types";
 
 function parseTags(str: string | null | undefined): string[] {
@@ -141,8 +142,7 @@ export default function UserProfilePage() {
                   disabled={dmLoading}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">DM を送る</span>
-                  <span className="xs:hidden">DM</span>
+                  DM
                 </Button>
               )}
             </div>
@@ -157,6 +157,18 @@ export default function UserProfilePage() {
               </Badge>
               <span className="text-xs text-muted-foreground break-all">{user.email}</span>
             </div>
+            {user.joinedAt && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <CalendarDays className="w-3 h-3 flex-shrink-0" />
+                {formatJoinedAt(user.joinedAt)}
+              </p>
+            )}
+            {user.birthday && (
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                <Cake className="w-3 h-3 flex-shrink-0" />
+                {formatBirthday(user.birthday)}
+              </p>
+            )}
           </div>
         </div>
       </div>

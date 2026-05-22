@@ -294,9 +294,20 @@ export default function ProfilePage() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">未設定</option>
-                {depts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
+                {depts
+                  .filter((d) => !d.parentId)
+                  .sort((a, b) => a.order - b.order)
+                  .map((top) => {
+                    const children = depts
+                      .filter((d) => d.parentId === top.id)
+                      .sort((a, b) => a.order - b.order);
+                    return [
+                      <option key={top.id} value={top.id}>{top.name}</option>,
+                      ...children.map((c) => (
+                        <option key={c.id} value={c.id}>　└ {c.name}</option>
+                      )),
+                    ];
+                  })}
               </select>
             )}
           </div>
