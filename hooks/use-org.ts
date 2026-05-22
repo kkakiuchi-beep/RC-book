@@ -54,7 +54,7 @@ export function useOrg() {
                 canHelp: data.canHelp ?? null,
                 needHelp: data.needHelp ?? null,
                 joinedAt: (data.joinedAt as Timestamp)?.toDate() ?? null,
-                birthday: (data.birthday as Timestamp)?.toDate() ?? null,
+                birthday: (data.birthday as string | null) ?? null,
                 createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
                 updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
               } as AppUser;

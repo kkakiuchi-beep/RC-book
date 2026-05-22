@@ -85,7 +85,7 @@ async function fetchAppUser(uid: string, firebaseUser: User): Promise<AppUser> {
         canHelp: d.canHelp ?? null,
         needHelp: d.needHelp ?? null,
         joinedAt: d.joinedAt?.toDate() ?? null,
-        birthday: d.birthday?.toDate() ?? null,
+        birthday: (d.birthday as string | null) ?? null,
         createdAt: d.createdAt?.toDate() ?? new Date(),
         updatedAt: d.updatedAt?.toDate() ?? new Date(),
       };

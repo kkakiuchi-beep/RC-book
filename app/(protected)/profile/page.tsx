@@ -54,7 +54,6 @@ export default function ProfilePage() {
   const [lineId, setLineId] = useState("");
   const [joinYear, setJoinYear] = useState<string>("");
   const [joinMonth, setJoinMonth] = useState<string>("");
-  const [birthYear, setBirthYear] = useState<string>("");
   const [birthMonth, setBirthMonth] = useState<string>("");
   const [birthDay, setBirthDay] = useState<string>("");
   const [depts, setDepts] = useState<Department[]>([]);
@@ -74,9 +73,14 @@ export default function ProfilePage() {
       setLineId(appUser.lineId ?? "");
       setJoinYear(appUser.joinedAt ? String(appUser.joinedAt.getFullYear()) : "");
       setJoinMonth(appUser.joinedAt ? String(appUser.joinedAt.getMonth() + 1) : "");
-      setBirthYear(appUser.birthday ? String(appUser.birthday.getFullYear()) : "");
-      setBirthMonth(appUser.birthday ? String(appUser.birthday.getMonth() + 1) : "");
-      setBirthDay(appUser.birthday ? String(appUser.birthday.getDate()) : "");
+      if (appUser.birthday) {
+        const [mm, dd] = appUser.birthday.split("-");
+        setBirthMonth(String(Number(mm)));
+        setBirthDay(String(Number(dd)));
+      } else {
+        setBirthMonth("");
+        setBirthDay("");
+      }
     }
   }, [appUser]);
 
@@ -122,10 +126,10 @@ export default function ProfilePage() {
           ? new Date(Number(joinYear), Number(joinMonth) - 1, 1)
           : null;
 
-      // 誕生日 → Date に変換
-      const birthdayDate =
-        birthYear && birthMonth && birthDay
-          ? new Date(Number(birthYear), Number(birthMonth) - 1, Number(birthDay))
+      // 誕生日 → "MM-DD" 文字列に変換
+      const birthdayValue =
+        birthMonth && birthDay
+          ? `${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`
           : null;
 
       // Firestore 更新
@@ -141,7 +145,7 @@ export default function ProfilePage() {
         instagramId: instagramId.trim() || null,
         lineId: lineId.trim() || null,
         joinedAt: joinedAtDate,
-        birthday: birthdayDate,
+        birthday: birthdayValue,
         updatedAt: serverTimestamp(),
       });
 
@@ -332,7 +336,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* 誕生日 */}
+          {/* 誕生日（月・日のみ） */}
           <div className="space-y-1.5">
             <Label className="flex items-center gap-1.5">
               <Cake className="w-3.5 h-3.5 text-muted-foreground" />
@@ -340,34 +344,18 @@ export default function ProfilePage() {
             </Label>
             <div className="flex gap-2">
               <select
-                value={birthYear}
+                value={birthMonth}
                 onChange={(e) => {
-                  setBirthYear(e.target.value);
-                  // 月・日が選択済みの場合、その月の最大日数を超えていたらリセット
-                  if (birthMonth && birthDay) {
-                    const max = new Date(Number(e.target.value), Number(birthMonth), 0).getDate();
+                  setBirthMonth(e.target.value);
+                  // 月を変えたとき日がはみ出す場合はクランプ（うるう年考慮で2000年を使用）
+                  if (birthDay) {
+                    const max = new Date(2000, Number(e.target.value), 0).getDate();
                     if (Number(birthDay) > max) setBirthDay(String(max));
                   }
                 }}
                 className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="">年を選択</option>
-                {Array.from({ length: CURRENT_YEAR - 1950 + 1 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-                  <option key={y} value={y}>{y}年</option>
-                ))}
-              </select>
-              <select
-                value={birthMonth}
-                onChange={(e) => {
-                  setBirthMonth(e.target.value);
-                  if (birthDay) {
-                    const max = new Date(Number(birthYear) || 2000, Number(e.target.value), 0).getDate();
-                    if (Number(birthDay) > max) setBirthDay(String(max));
-                  }
-                }}
-                className="w-24 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">月</option>
+                <option value="">月を選択</option>
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>{m}月</option>
                 ))}
@@ -375,20 +363,20 @@ export default function ProfilePage() {
               <select
                 value={birthDay}
                 onChange={(e) => setBirthDay(e.target.value)}
-                className="w-24 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-28 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="">日</option>
+                <option value="">日を選択</option>
                 {Array.from(
-                  { length: birthMonth ? new Date(Number(birthYear) || 2000, Number(birthMonth), 0).getDate() : 31 },
+                  { length: birthMonth ? new Date(2000, Number(birthMonth), 0).getDate() : 31 },
                   (_, i) => i + 1
                 ).map((d) => (
                   <option key={d} value={d}>{d}日</option>
                 ))}
               </select>
             </div>
-            {birthYear && birthMonth && birthDay && (
+            {birthMonth && birthDay && (
               <p className="text-xs text-muted-foreground">
-                {formatBirthday(new Date(Number(birthYear), Number(birthMonth) - 1, Number(birthDay)))}
+                {formatBirthday(`${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`)}
               </p>
             )}
           </div>

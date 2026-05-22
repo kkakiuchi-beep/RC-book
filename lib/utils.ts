@@ -36,12 +36,10 @@ export function formatJoinedAt(joinedAt: Date): string {
   return `${year}年${month}月入社${yearsIn ? `（${yearsIn}）` : ""}`;
 }
 
-/** 誕生日を「1990年5月15日生まれ」形式で返す */
-export function formatBirthday(birthday: Date): string {
-  const year = birthday.getFullYear();
-  const month = birthday.getMonth() + 1;
-  const day = birthday.getDate();
-  return `${year}年${month}月${day}日生まれ`;
+/** 誕生日（"MM-DD"）を「5月15日生まれ」形式で返す */
+export function formatBirthday(birthday: string): string {
+  const [m, d] = birthday.split("-").map(Number);
+  return `${m}月${d}日生まれ`;
 }
 
 /** 名前からイニシャルを生成（最大2文字） */
