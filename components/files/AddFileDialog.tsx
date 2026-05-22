@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
-import { useOrg } from "@/hooks/use-org";
-import type { DriveFileMime } from "@/lib/types";
+import type { DriveFileMime, Department } from "@/lib/types";
 import type { useFiles } from "@/hooks/use-files";
 
 const MIME_OPTIONS: { label: string; value: DriveFileMime }[] = [
@@ -35,12 +36,31 @@ interface AddFileDialogProps {
 
 export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogProps) {
   const { appUser } = useAuth();
-  const { depts, loading: deptsLoading } = useOrg();
+
+  const [depts, setDepts] = useState<Department[]>([]);
+  const [deptsLoading, setDeptsLoading] = useState(true);
+
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [mimeType, setMimeType] = useState<DriveFileMime>("application/pdf");
   const [departmentId, setDepartmentId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    getDocs(query(collection(db, "departments"), orderBy("order", "asc")))
+      .then((snap) => {
+        setDepts(
+          snap.docs.map((d) => ({
+            id: d.id,
+            name: d.data().name as string,
+            order: d.data().order as number,
+            parentId: (d.data().parentId as string | null) ?? null,
+          }))
+        );
+      })
+      .catch(console.error)
+      .finally(() => setDeptsLoading(false));
+  }, []);
 
   if (!appUser) return null;
 
@@ -49,10 +69,6 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
     setUrl("");
     setMimeType("application/pdf");
     setDepartmentId("");
-  };
-
-  const handleDeptChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setDepartmentId(e.target.value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,8 +95,9 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
     }
   };
 
-  // トップレベル部署 → 子部署の順に並べる
-  const topDepts = depts.filter((d) => !d.parentId).sort((a, b) => a.order - b.order);
+  const topDepts = depts
+    .filter((d) => !d.parentId)
+    .sort((a, b) => a.order - b.order);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
@@ -89,6 +106,7 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
           <DialogTitle>ファイルを追加</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+
           <div className="space-y-1.5">
             <Label htmlFor="file-title">タイトル</Label>
             <Input
@@ -140,7 +158,7 @@ export function AddFileDialog({ open, onOpenChange, onSubmit }: AddFileDialogPro
               <select
                 id="file-dept"
                 value={departmentId}
-                onChange={handleDeptChange}
+                onChange={(e) => setDepartmentId(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">全社（部署指定なし）</option>
