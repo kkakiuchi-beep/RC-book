@@ -5,6 +5,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Bell, Search } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useAuth } from "@/lib/auth";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import { cn } from "@/lib/utils";
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -31,16 +33,18 @@ function getTitle(pathname: string): string {
 export function Header() {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
+  const { appUser } = useAuth();
   const title = getTitle(pathname);
 
   return (
     <header className="h-14 flex items-center justify-between px-4 border-b bg-background sticky top-0 z-30">
-      {/* モバイルはロゴ＋タイトル、PCはサイドバーにロゴあるので非表示 */}
+      {/* モバイル: ロゴ＋タイトル / PC: サイドバーにロゴあるのでタイトルのみ */}
       <div className="flex items-center gap-2 md:hidden">
         <Image src="/company-logo.png" alt="ロゴ" width={28} height={28} priority />
         <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
       </div>
       <h1 className="hidden md:block text-base font-semibold tracking-tight">{title}</h1>
+
       <div className="flex items-center gap-1">
         {/* 検索 */}
         <Link
@@ -74,6 +78,27 @@ export function Header() {
             </span>
           )}
         </Link>
+
+        {/* スマホのみ: プロフィールへのアバターリンク */}
+        {appUser && (
+          <Link
+            href="/profile"
+            className={cn(
+              "md:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-colors flex-shrink-0",
+              pathname === "/profile"
+                ? "ring-2 ring-primary ring-offset-1 rounded-full"
+                : ""
+            )}
+            aria-label="プロフィール"
+          >
+            <UserAvatar
+              name={appUser.displayName}
+              photoURL={appUser.photoURL}
+              uid={appUser.uid}
+              size="sm"
+            />
+          </Link>
+        )}
       </div>
     </header>
   );
