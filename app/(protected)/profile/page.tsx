@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Pencil, Save, X, Instagram, AtSign, Target, HelpCircle, CalendarDays, Cake,
+  Pencil, Save, X, Instagram, AtSign, Target, HelpCircle, CalendarDays, Cake, Trophy, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
@@ -52,6 +52,8 @@ export default function ProfilePage() {
   const [needHelp, setNeedHelp] = useState("");
   const [instagramId, setInstagramId] = useState("");
   const [lineId, setLineId] = useState("");
+  const [clubs, setClubs] = useState("");
+  const [clubInput, setClubInput] = useState("");
   const [joinYear, setJoinYear] = useState<string>("");
   const [joinMonth, setJoinMonth] = useState<string>("");
   const [birthMonth, setBirthMonth] = useState<string>("");
@@ -71,6 +73,8 @@ export default function ProfilePage() {
       setNeedHelp(appUser.needHelp ?? "");
       setInstagramId(appUser.instagramId ?? "");
       setLineId(appUser.lineId ?? "");
+      setClubs(appUser.clubs ?? "");
+      setClubInput("");
       setJoinYear(appUser.joinedAt ? String(appUser.joinedAt.getFullYear()) : "");
       setJoinMonth(appUser.joinedAt ? String(appUser.joinedAt.getMonth() + 1) : "");
       if (appUser.birthday) {
@@ -144,6 +148,7 @@ export default function ProfilePage() {
         needHelp: needHelp.trim() || null,
         instagramId: instagramId.trim() || null,
         lineId: lineId.trim() || null,
+        clubs: clubs.trim() || null,
         joinedAt: joinedAtDate,
         birthday: birthdayValue,
         updatedAt: serverTimestamp(),
@@ -173,9 +178,25 @@ export default function ProfilePage() {
   const skillTags = parseTags(appUser.skills);
   const canHelpTags = parseTags(appUser.canHelp);
   const needHelpTags = parseTags(appUser.needHelp);
+  const clubTagsDisplay = parseTags(appUser.clubs);
   const hasSkillsSection =
     skillTags.length > 0 || canHelpTags.length > 0 || needHelpTags.length > 0;
   const hasSNS = !!(appUser.instagramId || appUser.lineId);
+
+  // 部活タグ操作ヘルパー
+  const addClub = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const existing = parseTags(clubs);
+    if (!existing.includes(trimmed)) {
+      setClubs(existing.length > 0 ? `${clubs},${trimmed}` : trimmed);
+    }
+    setClubInput("");
+  };
+  const removeClub = (tag: string) => {
+    setClubs(parseTags(clubs).filter((t) => t !== tag).join(","));
+  };
+  const clubTagsForm = parseTags(clubs);
 
   return (
     <div className="space-y-3 max-w-2xl">
@@ -515,6 +536,59 @@ export default function ProfilePage() {
             />
           </div>
 
+          {/* 部活・サークル */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Trophy className="w-3.5 h-3.5 text-violet-500" />
+              部活・サークル
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={clubInput}
+                onChange={(e) => setClubInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addClub(clubInput);
+                  }
+                }}
+                placeholder="例: 野球部（Enterで追加）"
+                maxLength={30}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0 gap-1 px-3"
+                onClick={() => addClub(clubInput)}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                追加
+              </Button>
+            </div>
+            {clubTagsForm.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {clubTagsForm.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center gap-1 text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded-full px-2.5 py-1"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeClub(tag)}
+                      className="hover:text-rose-500 transition-colors flex-shrink-0"
+                      aria-label={`${tag}を削除`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Enterまたは「追加」ボタンで複数登録できます</p>
+          </div>
+
           {/* 保存ボタン */}
           <div className="flex gap-2 pt-2 border-t">
             <Button onClick={handleSave} disabled={saving} className="gap-2">
@@ -603,6 +677,26 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* ── 部活・サークル ── */}
+      {!editing && clubTagsDisplay.length > 0 && (
+        <div className="bg-card rounded-2xl border p-5">
+          <h2 className="text-sm font-bold text-blue-600 border-b border-border pb-2 mb-3 flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5 text-violet-500" />
+            部活・サークル
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {clubTagsDisplay.map((tag) => (
+              <span
+                key={tag}
+                className="text-sm bg-violet-50 text-violet-700 border border-violet-200 rounded-full px-3 py-1"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── SNS ── */}
       {!editing && hasSNS && (
         <div className="bg-card rounded-2xl border p-5">
@@ -632,7 +726,7 @@ export default function ProfilePage() {
       )}
 
       {/* まだ情報がない場合 */}
-      {!editing && !appUser.hobbies && !hasSkillsSection && !hasSNS && (
+      {!editing && !appUser.hobbies && !hasSkillsSection && clubTagsDisplay.length === 0 && !hasSNS && (
         <div className="bg-card rounded-2xl border p-8 text-center">
           <p className="text-sm text-muted-foreground mb-3">
             まだプロフィール情報が登録されていません

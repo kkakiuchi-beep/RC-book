@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, MessageSquare, Instagram, AtSign, Target, HelpCircle, CalendarDays, Cake,
+  ArrowLeft, MessageSquare, Instagram, AtSign, Target, HelpCircle, CalendarDays, Cake, Trophy,
 } from "lucide-react";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
 import { formatJoinedAt, formatBirthday } from "@/lib/utils";
@@ -37,6 +37,7 @@ function mapDocToUser(uid: string, d: Record<string, unknown>): AppUser {
     bio: (d.bio as string | null) ?? null,
     canHelp: (d.canHelp as string | null) ?? null,
     needHelp: (d.needHelp as string | null) ?? null,
+    clubs: (d.clubs as string | null) ?? null,
     joinedAt: (d.joinedAt as Timestamp)?.toDate() ?? null,
     birthday: (d.birthday as string | null) ?? null,
     createdAt: (d.createdAt as Timestamp)?.toDate() ?? new Date(),
@@ -98,6 +99,7 @@ export default function UserProfilePage() {
   const skillTags = parseTags(user.skills);
   const canHelpTags = parseTags(user.canHelp);
   const needHelpTags = parseTags(user.needHelp);
+  const clubTags = parseTags(user.clubs);
   const hasSkillsSection = skillTags.length > 0 || canHelpTags.length > 0 || needHelpTags.length > 0;
   const hasSNS = !!(user.instagramId || user.lineId);
 
@@ -246,6 +248,26 @@ export default function UserProfilePage() {
         </div>
       )}
 
+      {/* ── 部活・サークル ── */}
+      {clubTags.length > 0 && (
+        <div className="bg-card rounded-2xl border p-5">
+          <h2 className="text-sm font-bold text-blue-600 border-b border-border pb-2 mb-3 flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5 text-violet-500" />
+            部活・サークル
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {clubTags.map((tag) => (
+              <span
+                key={tag}
+                className="text-sm bg-violet-50 text-violet-700 border border-violet-200 rounded-full px-3 py-1"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── SNS ── */}
       {hasSNS && (
         <div className="bg-card rounded-2xl border p-5">
@@ -275,7 +297,7 @@ export default function UserProfilePage() {
       )}
 
       {/* 情報なし */}
-      {!user.hobbies && !hasSkillsSection && !hasSNS && (
+      {!user.hobbies && !hasSkillsSection && clubTags.length === 0 && !hasSNS && (
         <div className="bg-card rounded-2xl border p-8 text-center">
           <p className="text-sm text-muted-foreground">
             まだプロフィール情報が登録されていません

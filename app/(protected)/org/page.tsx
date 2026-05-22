@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, MessageSquare, Users,
-  Instagram, AtSign, Target, HelpCircle, ArrowLeft, CalendarDays, Cake,
+  Instagram, AtSign, Target, HelpCircle, ArrowLeft, CalendarDays, Cake, Trophy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -98,7 +98,8 @@ export default function OrgPage() {
         u.email.toLowerCase().includes(q) ||
         (u.departmentName ?? "").toLowerCase().includes(q) ||
         (u.skills ?? "").toLowerCase().includes(q) ||
-        (u.canHelp ?? "").toLowerCase().includes(q);
+        (u.canHelp ?? "").toLowerCase().includes(q) ||
+        (u.clubs ?? "").toLowerCase().includes(q);
       return matchDept && matchSearch;
     });
 
@@ -649,6 +650,7 @@ function MemberProfile({ member, appUser, depts, onDM, dmLoading }: MemberProfil
   const skillTags = member.skills?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
   const canHelpTags = member.canHelp?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
   const needHelpTags = member.needHelp?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
+  const clubTags = member.clubs?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
   const hasSkillsSection = skillTags.length > 0 || canHelpTags.length > 0 || needHelpTags.length > 0;
   const hasSNS = !!(member.instagramId || member.lineId);
 
@@ -801,7 +803,23 @@ function MemberProfile({ member, appUser, depts, onDM, dmLoading }: MemberProfil
           </div>
         )}
 
-        {!member.hobbies && !hasSkillsSection && !hasSNS && (
+        {clubTags.length > 0 && (
+          <div className="bg-card rounded-2xl border p-4">
+            <h4 className="text-sm font-bold text-blue-600 border-b border-border pb-2 mb-3 flex items-center gap-1.5">
+              <Trophy className="w-3.5 h-3.5 text-violet-500" />
+              部活・サークル
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
+              {clubTags.map((tag) => (
+                <span key={tag} className="text-xs bg-violet-50 text-violet-700 border border-violet-200 rounded-full px-2.5 py-0.5">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!member.hobbies && !hasSkillsSection && clubTags.length === 0 && !hasSNS && (
           <p className="text-xs text-muted-foreground text-center py-4">
             プロフィール情報はまだ登録されていません
           </p>

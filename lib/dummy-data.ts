@@ -27,7 +27,7 @@ export const dummyDepts: Department[] = [
 
 // ── users ──────────────────────────────────────────────────
 const j = (y: number, m: number, d = 1) => new Date(y, m - 1, d); // 日付ヘルパー
-const base = { bio: null, instagramId: null, lineId: null, hobbies: null, skills: null, canHelp: null, needHelp: null };
+const base = { bio: null, instagramId: null, lineId: null, hobbies: null, skills: null, canHelp: null, needHelp: null, clubs: null };
 
 export const dummyUsers: AppUser[] = [
   { ...base, uid: "u1", email: "i.kakiuchi@rc-group.co.jp", displayName: "垣内 一郎", photoURL: null, departmentId: "dept-exec", departmentName: "経営管理部", role: "admin", joinedAt: j(2018, 4), birthday: "07-12", createdAt: ago(30 * day), updatedAt: ago(1 * day) },

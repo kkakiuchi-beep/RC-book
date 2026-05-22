@@ -53,6 +53,7 @@ export function useOrg() {
                 skills: data.skills ?? null,
                 canHelp: data.canHelp ?? null,
                 needHelp: data.needHelp ?? null,
+                clubs: (data.clubs as string | null) ?? null,
                 joinedAt: (data.joinedAt as Timestamp)?.toDate() ?? null,
                 birthday: (data.birthday as string | null) ?? null,
                 createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
