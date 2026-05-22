@@ -21,11 +21,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Pencil, Save, X, Instagram, AtSign, Target, HelpCircle,
+  Pencil, Save, X, Instagram, AtSign, Target, HelpCircle, CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
+import { formatJoinedAt } from "@/lib/utils";
 import type { Department } from "@/lib/types";
+
+const CURRENT_YEAR = new Date().getFullYear();
+const JOIN_YEARS = Array.from({ length: CURRENT_YEAR - 1980 + 1 }, (_, i) => CURRENT_YEAR - i);
 
 function parseTags(str: string | null | undefined): string[] {
   if (!str) return [];
@@ -48,6 +52,8 @@ export default function ProfilePage() {
   const [needHelp, setNeedHelp] = useState("");
   const [instagramId, setInstagramId] = useState("");
   const [lineId, setLineId] = useState("");
+  const [joinYear, setJoinYear] = useState<string>("");
+  const [joinMonth, setJoinMonth] = useState<string>("");
   const [depts, setDepts] = useState<Department[]>([]);
   const [deptsLoading, setDeptsLoading] = useState(true);
 
@@ -63,6 +69,8 @@ export default function ProfilePage() {
       setNeedHelp(appUser.needHelp ?? "");
       setInstagramId(appUser.instagramId ?? "");
       setLineId(appUser.lineId ?? "");
+      setJoinYear(appUser.joinedAt ? String(appUser.joinedAt.getFullYear()) : "");
+      setJoinMonth(appUser.joinedAt ? String(appUser.joinedAt.getMonth() + 1) : "");
     }
   }, [appUser]);
 
@@ -102,6 +110,12 @@ export default function ProfilePage() {
       // Firebase Auth 表示名を更新
       await updateProfile(auth.currentUser, { displayName: displayName.trim() });
 
+      // 入社年月 → Date（月初）に変換
+      const joinedAtDate =
+        joinYear && joinMonth
+          ? new Date(Number(joinYear), Number(joinMonth) - 1, 1)
+          : null;
+
       // Firestore 更新
       await updateDoc(doc(db, "users", appUser.uid), {
         displayName: displayName.trim(),
@@ -114,6 +128,7 @@ export default function ProfilePage() {
         needHelp: needHelp.trim() || null,
         instagramId: instagramId.trim() || null,
         lineId: lineId.trim() || null,
+        joinedAt: joinedAtDate,
         updatedAt: serverTimestamp(),
       });
 
@@ -205,6 +220,12 @@ export default function ProfilePage() {
               </Badge>
               <span className="text-xs text-muted-foreground truncate">{appUser.email}</span>
             </div>
+            {appUser.joinedAt && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <CalendarDays className="w-3 h-3 flex-shrink-0" />
+                {formatJoinedAt(appUser.joinedAt)}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -254,6 +275,41 @@ export default function ProfilePage() {
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
+            )}
+          </div>
+
+          {/* 入社年月 */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+              入社年月
+            </Label>
+            <div className="flex gap-2">
+              <select
+                value={joinYear}
+                onChange={(e) => setJoinYear(e.target.value)}
+                className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">年を選択</option>
+                {JOIN_YEARS.map((y) => (
+                  <option key={y} value={y}>{y}年</option>
+                ))}
+              </select>
+              <select
+                value={joinMonth}
+                onChange={(e) => setJoinMonth(e.target.value)}
+                className="w-32 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">月を選択</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>{m}月</option>
+                ))}
+              </select>
+            </div>
+            {joinYear && joinMonth && (
+              <p className="text-xs text-muted-foreground">
+                {formatJoinedAt(new Date(Number(joinYear), Number(joinMonth) - 1, 1))}
+              </p>
             )}
           </div>
 

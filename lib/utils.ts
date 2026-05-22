@@ -18,6 +18,24 @@ export function relativeTime(date: Date): string {
   return date.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
 }
 
+/** 入社日から「X年目」の文字列を返す。未来 or null なら null */
+export function calcYearsIn(joinedAt: Date): string | null {
+  const now = new Date();
+  const months =
+    (now.getFullYear() - joinedAt.getFullYear()) * 12 +
+    (now.getMonth() - joinedAt.getMonth());
+  if (months < 0) return null;
+  return `${Math.floor(months / 12) + 1}年目`;
+}
+
+/** 入社日を「2022年4月入社（4年目）」形式で返す */
+export function formatJoinedAt(joinedAt: Date): string {
+  const year = joinedAt.getFullYear();
+  const month = joinedAt.getMonth() + 1;
+  const yearsIn = calcYearsIn(joinedAt);
+  return `${year}年${month}月入社${yearsIn ? `（${yearsIn}）` : ""}`;
+}
+
 /** 名前からイニシャルを生成（最大2文字） */
 export function getInitials(name: string): string {
   return name.trim().slice(0, 2) || "??";

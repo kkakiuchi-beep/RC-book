@@ -54,6 +54,7 @@ async function fetchAppUser(uid: string, firebaseUser: User): Promise<AppUser> {
     skills: null,
     canHelp: null,
     needHelp: null,
+    joinedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -82,6 +83,7 @@ async function fetchAppUser(uid: string, firebaseUser: User): Promise<AppUser> {
         skills: d.skills ?? null,
         canHelp: d.canHelp ?? null,
         needHelp: d.needHelp ?? null,
+        joinedAt: d.joinedAt?.toDate() ?? null,
         createdAt: d.createdAt?.toDate() ?? new Date(),
         updatedAt: d.updatedAt?.toDate() ?? new Date(),
       };

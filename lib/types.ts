@@ -20,6 +20,7 @@ export interface AppUser {
   bio: string | null;       // ひとこと（名前の下に表示）
   canHelp: string | null;   // カンマ区切り「これは私に聞け！」
   needHelp: string | null;  // カンマ区切り「たすけてほしい！」
+  joinedAt: Date | null;    // 入社年月（月初 Date）
   createdAt: Date;
   updatedAt: Date;
 }

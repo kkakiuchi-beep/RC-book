@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, MessageSquare, Users,
-  Instagram, AtSign, Target, HelpCircle, ArrowLeft,
+  Instagram, AtSign, Target, HelpCircle, ArrowLeft, CalendarDays,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { useOrg } from "@/hooks/use-org";
 import { useChats } from "@/hooks/use-chats";
 import { useAuth } from "@/lib/auth";
 import { ROLE_LABELS, ROLE_BADGE_VARIANT } from "@/lib/permissions";
-import { cn } from "@/lib/utils";
+import { cn, formatJoinedAt } from "@/lib/utils";
 import type { AppUser, Department } from "@/lib/types";
 
 // ── 部署カラーパレット ──────────────────────────────────────
@@ -681,6 +681,12 @@ function MemberProfile({ member, appUser, depts, onDM, dmLoading }: MemberProfil
                 )}
                 <span className="text-xs text-muted-foreground truncate">{member.email}</span>
               </div>
+              {member.joinedAt && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <CalendarDays className="w-3 h-3 flex-shrink-0" />
+                  {formatJoinedAt(member.joinedAt)}
+                </p>
+              )}
             </div>
           </div>
         </div>
