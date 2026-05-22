@@ -18,10 +18,12 @@ const day = 86_400_000;
 
 // ── departments ────────────────────────────────────────────
 export const dummyDepts: Department[] = [
-  { id: "dept-exec", name: "経営管理部", order: 1 },
-  { id: "dept-sales", name: "営業部", order: 2 },
-  { id: "dept-dev", name: "開発部", order: 3 },
-  { id: "dept-hr", name: "人事・総務部", order: 4 },
+  { id: "dept-exec", name: "経営管理部", order: 1, parentId: null },
+  { id: "dept-sales", name: "営業部", order: 2, parentId: null },
+  { id: "dept-sales-1", name: "1st", order: 0, parentId: "dept-sales" },
+  { id: "dept-sales-2", name: "2nd", order: 1, parentId: "dept-sales" },
+  { id: "dept-dev", name: "開発部", order: 3, parentId: null },
+  { id: "dept-hr", name: "人事・総務部", order: 4, parentId: null },
 ];
 
 // ── users ──────────────────────────────────────────────────

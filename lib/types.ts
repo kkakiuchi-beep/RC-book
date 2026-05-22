@@ -29,6 +29,7 @@ export interface Department {
   id: string;
   name: string;
   order: number;
+  parentId: string | null; // null = トップレベル部署
 }
 
 // ── timelinePosts コレクション ─────────────────────────────

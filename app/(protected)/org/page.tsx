@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, MessageSquare, Users,
-  Instagram, AtSign, Target, HelpCircle,
+  Instagram, AtSign, Target, HelpCircle, ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { UserAvatar } from "@/components/shared/UserAvatar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useOrg } from "@/hooks/use-org";
 import { useChats } from "@/hooks/use-chats";
@@ -27,10 +26,25 @@ const DEPT_COLORS = [
   "#2E7D77", "#607D8B",
 ];
 
+/** 子部署も含め、ルート部署の色を返す */
 function getDeptColor(deptId: string | null, depts: Department[]): string {
   if (!deptId) return "#94A3B8";
-  const idx = depts.findIndex((d) => d.id === deptId);
+  // parentId をたどってルートを見つける
+  let id = deptId;
+  for (let i = 0; i < 10; i++) {
+    const dept = depts.find((d) => d.id === id);
+    if (!dept || dept.parentId === null) break;
+    id = dept.parentId;
+  }
+  const topLevel = depts.filter((d) => d.parentId === null);
+  const idx = topLevel.findIndex((d) => d.id === id);
   return idx >= 0 ? DEPT_COLORS[idx % DEPT_COLORS.length] : "#94A3B8";
+}
+
+/** deptId の子孫 ID を再帰的に収集（自身を含む） */
+function getDescendantIds(deptId: string, depts: Department[]): string[] {
+  const children = depts.filter((d) => d.parentId === deptId);
+  return [deptId, ...children.flatMap((c) => getDescendantIds(c.id, depts))];
 }
 
 type TabMode = "people" | "org";
@@ -50,9 +64,32 @@ export default function OrgPage() {
   const [dmLoading, setDmLoading] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<AppUser | null>(null);
 
+  // 部署フィルター用: トップレベル → 子の順で並べる
+  const deptSelectOptions = useMemo(() => {
+    const topLevel = depts.filter((d) => d.parentId === null);
+    const result: { id: string; label: string }[] = [];
+    for (const parent of topLevel) {
+      result.push({ id: parent.id, label: parent.name });
+      const children = depts
+        .filter((d) => d.parentId === parent.id)
+        .sort((a, b) => a.order - b.order);
+      for (const child of children) {
+        result.push({ id: child.id, label: `　└ ${child.name}` });
+      }
+    }
+    return result;
+  }, [depts]);
+
   const filtered = useMemo(() => {
     let result = users.filter((u) => {
-      const matchDept = selectedDept === "all" || u.departmentId === selectedDept;
+      let matchDept = false;
+      if (selectedDept === "all") {
+        matchDept = true;
+      } else {
+        // 選択部署 + その子孫部署のメンバーを含める
+        const descendantIds = getDescendantIds(selectedDept, depts);
+        matchDept = u.departmentId !== null && descendantIds.includes(u.departmentId);
+      }
       const q = search.toLowerCase();
       const matchSearch =
         !q ||
@@ -76,7 +113,7 @@ export default function OrgPage() {
       });
     }
     return result;
-  }, [users, selectedDept, search, sort, randomSeed]);
+  }, [users, depts, selectedDept, search, sort, randomSeed]);
 
   const handleDM = async (other: AppUser) => {
     if (!appUser) return;
@@ -95,7 +132,8 @@ export default function OrgPage() {
     await handleDM(selectedMember);
   };
 
-  const handleBubbleClick = (deptId: string) => {
+  /** 組織ツリーの部署クリック → 人を探すタブで絞り込み */
+  const handleDeptClick = (deptId: string) => {
     setSelectedDept(deptId);
     setTab("people");
   };
@@ -148,8 +186,8 @@ export default function OrgPage() {
                 className="flex-1 h-9 rounded-full border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="all">すべての部署</option>
-                {depts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                {deptSelectOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
               </select>
               <select
@@ -218,7 +256,6 @@ export default function OrgPage() {
                     style={{ borderTop: `3px solid ${color}` }}
                   >
                     <div className="p-3.5 flex items-start gap-3">
-                      {/* カラーアバター */}
                       <div
                         className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 select-none"
                         style={{ backgroundColor: color }}
@@ -241,7 +278,6 @@ export default function OrgPage() {
                           )}
                         </div>
                       </div>
-                      {/* DM ボタン */}
                       {appUser && member.uid !== appUser.uid && (
                         <Button
                           variant="ghost"
@@ -265,11 +301,11 @@ export default function OrgPage() {
 
       {/* ── 組織を見る ── */}
       {tab === "org" && (
-        <BubbleChart
+        <OrgTree
           users={users}
           depts={depts}
           loading={loading}
-          onDeptClick={handleBubbleClick}
+          onDeptClick={handleDeptClick}
         />
       )}
 
@@ -291,8 +327,8 @@ export default function OrgPage() {
   );
 }
 
-// ── バブルチャート ──────────────────────────────────────────
-function BubbleChart({
+// ── 組織ツリー ──────────────────────────────────────────────
+function OrgTree({
   users,
   depts,
   loading,
@@ -303,108 +339,179 @@ function BubbleChart({
   loading: boolean;
   onDeptClick: (deptId: string) => void;
 }) {
-  const memberCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    users.forEach((u) => {
-      if (u.departmentId) {
-        counts[u.departmentId] = (counts[u.departmentId] ?? 0) + 1;
-      }
+  const topLevelDepts = useMemo(
+    () => depts.filter((d) => d.parentId === null).sort((a, b) => a.order - b.order),
+    [depts]
+  );
+
+  // 初期状態: トップレベル部署を展開
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (topLevelDepts.length > 0) {
+      setExpanded(new Set(topLevelDepts.map((d) => d.id)));
+    }
+  }, [topLevelDepts]);
+
+  const toggleDept = (deptId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(deptId)) next.delete(deptId);
+      else next.add(deptId);
+      return next;
     });
-    return counts;
-  }, [users]);
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-        読み込み中...
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-card rounded-xl border p-4">
+            <Skeleton className="h-5 w-32" />
+          </div>
+        ))}
       </div>
     );
   }
 
-  const CX = 400;
-  const CY = 310;
-  const LAYOUT_R = 195;
-
-  function wrapText(text: string, maxLen = 5): string[] {
-    const lines: string[] = [];
-    for (let i = 0; i < text.length; i += maxLen) {
-      lines.push(text.slice(i, i + maxLen));
-    }
-    return lines;
-  }
-
   return (
-    <div className="w-full">
-      <p className="text-xs text-center text-muted-foreground mb-1">
-        部署をクリックすると絞り込みができます
-      </p>
-      <svg
-        viewBox="0 0 800 620"
-        className="w-full"
-        style={{ maxHeight: "65vh" }}
-      >
-        {/* 部署バブル */}
-        {depts.map((dept, i) => {
-          const angle = (i / depts.length) * 2 * Math.PI - Math.PI / 2;
-          const count = memberCounts[dept.id] ?? 0;
-          const bubbleR = 42 + Math.sqrt(count) * 9;
-          const x = CX + LAYOUT_R * Math.cos(angle);
-          const y = CY + LAYOUT_R * Math.sin(angle);
-          const color = DEPT_COLORS[i % DEPT_COLORS.length];
-          const lines = wrapText(dept.name);
-          const lineH = 14;
-          const totalH = lines.length * lineH;
-          const badgeX = x + Math.cos(Math.PI / 4) * bubbleR;
-          const badgeY = y + Math.sin(Math.PI / 4) * bubbleR;
+    <div className="space-y-3">
+      {topLevelDepts.map((dept, deptIdx) => {
+        const color = DEPT_COLORS[deptIdx % DEPT_COLORS.length];
+        const childDepts = depts
+          .filter((d) => d.parentId === dept.id)
+          .sort((a, b) => a.order - b.order);
+        const isExpanded = expanded.has(dept.id);
+        const directMembers = users.filter((u) => u.departmentId === dept.id);
+        const totalCount = users.filter((u) => {
+          if (!u.departmentId) return false;
+          return getDescendantIds(dept.id, depts).includes(u.departmentId);
+        }).length;
 
-          return (
-            <g key={dept.id} onClick={() => onDeptClick(dept.id)} style={{ cursor: "pointer" }}>
-              <circle cx={x} cy={y} r={bubbleR} fill={color} />
-              {lines.map((line, li) => (
-                <text
-                  key={li}
-                  x={x}
-                  y={y - totalH / 2 + lineH * li + lineH * 0.5}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="white"
-                  fontSize={12}
-                  fontWeight="600"
-                >
-                  {line}
-                </text>
-              ))}
-              {/* カウントバッジ */}
-              <circle cx={badgeX} cy={badgeY} r={13} fill="white" opacity={0.95} />
-              <text
-                x={badgeX}
-                y={badgeY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill={color}
-                fontSize={10}
-                fontWeight="bold"
+        return (
+          <div key={dept.id} className="bg-card rounded-xl border overflow-hidden">
+            {/* 部署ヘッダー */}
+            <div className="flex items-center" style={{ borderLeft: `4px solid ${color}` }}>
+              <button
+                type="button"
+                onClick={() => toggleDept(dept.id)}
+                className="flex-1 flex items-center gap-2.5 px-4 py-3.5 text-left hover:bg-secondary/30 transition-colors"
               >
-                {count}
-              </text>
-            </g>
-          );
-        })}
+                <span className="font-semibold text-sm">{dept.name}</span>
+                <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                  {totalCount}名
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 text-muted-foreground ml-auto transition-transform duration-200",
+                    isExpanded && "rotate-180"
+                  )}
+                />
+              </button>
+              {/* 人を探すタブで絞り込むアイコン */}
+              <button
+                type="button"
+                onClick={() => onDeptClick(dept.id)}
+                className="px-3 py-3.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                title={`${dept.name}で絞り込む`}
+              >
+                <Users className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-        {/* 中央: 組織図 */}
-        <circle cx={CX} cy={CY} r={68} fill="#3B5BA5" />
-        <text
-          x={CX}
-          y={CY}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill="white"
-          fontSize={17}
-          fontWeight="bold"
-        >
-          組織図
-        </text>
-      </svg>
+            {/* 展開コンテンツ */}
+            {isExpanded && (
+              <div className="border-t bg-background/50">
+                {/* 直属メンバー */}
+                {directMembers.length > 0 && (
+                  <div className={cn("p-3", childDepts.length > 0 && "border-b")}>
+                    {childDepts.length > 0 && (
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">直属メンバー</p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {directMembers.map((member) => (
+                        <MiniMemberCard key={member.uid} member={member} color={color} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 子部署 */}
+                {childDepts.map((child) => {
+                  const childMembers = users.filter((u) => u.departmentId === child.id);
+                  const isChildExpanded = expanded.has(child.id);
+
+                  return (
+                    <div key={child.id} className="border-b last:border-b-0">
+                      <div className="flex items-center pl-5">
+                        <span className="text-muted-foreground/40 text-sm mr-1 select-none">└</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleDept(child.id)}
+                          className="flex-1 flex items-center gap-2 py-2.5 px-2 text-left hover:bg-secondary/30 transition-colors"
+                        >
+                          <span className="text-sm font-medium">{child.name}</span>
+                          <span className="text-xs text-muted-foreground">{childMembers.length}名</span>
+                          {childMembers.length > 0 && (
+                            <ChevronDown
+                              className={cn(
+                                "w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform duration-200",
+                                isChildExpanded && "rotate-180"
+                              )}
+                            />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeptClick(child.id)}
+                          className="px-3 py-2.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                          title={`${child.name}で絞り込む`}
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {isChildExpanded && childMembers.length > 0 && (
+                        <div className="pl-9 pr-3 pb-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {childMembers.map((member) => (
+                              <MiniMemberCard key={member.uid} member={member} color={color} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* メンバーも子部署もなし */}
+                {directMembers.length === 0 && childDepts.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">メンバーなし</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── ミニメンバーカード (組織ツリー内) ──────────────────────
+function MiniMemberCard({ member, color }: { member: AppUser; color: string }) {
+  return (
+    <div className="flex items-center gap-2 bg-muted/40 rounded-lg p-2 min-w-0">
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none"
+        style={{ backgroundColor: color }}
+      >
+        {member.displayName.slice(0, 1)}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium truncate leading-snug">{member.displayName}</p>
+        {member.role !== "staff" && (
+          <p className="text-[10px] text-muted-foreground truncate">{ROLE_LABELS[member.role]}</p>
+        )}
+      </div>
     </div>
   );
 }

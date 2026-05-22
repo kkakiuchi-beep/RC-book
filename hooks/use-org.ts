@@ -64,6 +64,7 @@ export function useOrg() {
               id: d.id,
               name: d.data().name as string,
               order: d.data().order as number,
+              parentId: (d.data().parentId as string | null) ?? null,
             }));
 
         _cache = { users: fetchedUsers, depts: fetchedDepts, ts: Date.now() };
