@@ -75,6 +75,7 @@ export default function ProfilePage() {
               id: d.id,
               name: d.data().name as string,
               order: d.data().order as number,
+              parentId: (d.data().parentId as string | null) ?? null,
             }))
           );
         }

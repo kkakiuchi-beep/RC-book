@@ -12,7 +12,6 @@ import type {
 } from "./types";
 
 const ago = (ms: number) => new Date(Date.now() - ms);
-const min = 60_000;
 const hr = 3_600_000;
 const day = 86_400_000;
 
