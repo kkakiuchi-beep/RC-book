@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   collection,
   query,
@@ -15,18 +15,51 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
 import type { Notification } from "@/lib/types";
 
+function showDesktopNotification(n: Notification) {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  const notif = new Notification(n.fromUserName, {
+    body: n.message,
+    icon: "/company-logo.png",
+    tag: n.id, // 同じ ID が来ても重複しない
+  });
+  notif.onclick = () => {
+    window.focus();
+    window.location.href = n.relatedPath;
+  };
+}
+
 export function useNotifications() {
   const { appUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [desktopPermission, setDesktopPermission] = useState<NotificationPermission>("default");
+
+  // パーミッション状態を初期化
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setDesktopPermission(Notification.permission);
+    }
+  }, []);
+
+  // デスクトップ通知の許可をリクエスト
+  const requestDesktopPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    const result = await Notification.requestPermission();
+    setDesktopPermission(result);
+  };
+
+  // 初回ロード時の既存通知 ID を記憶（これらには通知しない）
+  const isInitialLoad = useRef(true);
+  const knownIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!appUser) {
       setLoading(false);
       return;
     }
-    // orderBy を除外して複合インデックスなしで動作させ、JS 側でソート・件数制限
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", appUser.uid)
@@ -50,8 +83,23 @@ export function useNotifications() {
             createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
           } as Notification;
         });
+
         // 新しい順にソートして最大50件
         items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        if (isInitialLoad.current) {
+          // 初回: 既存通知を「既知」として記録するだけ（デスクトップ通知は出さない）
+          items.forEach((n) => knownIds.current.add(n.id));
+          isInitialLoad.current = false;
+        } else {
+          // 2回目以降: 新着の未読だけデスクトップ通知
+          const newUnread = items.filter(
+            (n) => !knownIds.current.has(n.id) && !n.isRead
+          );
+          items.forEach((n) => knownIds.current.add(n.id));
+          newUnread.forEach(showDesktopNotification);
+        }
+
         setNotifications(items.slice(0, 50));
         setLoading(false);
       },
@@ -62,7 +110,7 @@ export function useNotifications() {
       }
     );
     return unsub;
-  }, [appUser?.uid]); // オブジェクト参照ではなく uid で比較
+  }, [appUser?.uid]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -84,5 +132,14 @@ export function useNotifications() {
     await batch.commit();
   };
 
-  return { notifications, loading, fetchError, unreadCount, markAsRead, markAllAsRead };
+  return {
+    notifications,
+    loading,
+    fetchError,
+    unreadCount,
+    desktopPermission,
+    requestDesktopPermission,
+    markAsRead,
+    markAllAsRead,
+  };
 }

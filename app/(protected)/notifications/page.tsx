@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, BellRing, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -10,7 +10,16 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { relativeTime, cn } from "@/lib/utils";
 
 export default function NotificationsPage() {
-  const { notifications, loading, fetchError, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications,
+    loading,
+    fetchError,
+    unreadCount,
+    desktopPermission,
+    requestDesktopPermission,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
   return (
     <div className="space-y-4">
@@ -30,6 +39,32 @@ export default function NotificationsPage() {
           </Button>
         )}
       </div>
+
+      {/* デスクトップ通知の許可バナー */}
+      {desktopPermission === "default" && (
+        <button
+          type="button"
+          onClick={requestDesktopPermission}
+          className="w-full flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl p-4 text-left hover:bg-primary/10 transition-colors"
+        >
+          <BellRing className="w-5 h-5 text-primary flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">デスクトップ通知を有効にする</p>
+            <p className="text-xs text-muted-foreground">ブラウザがバックグラウンドでも通知を受け取れます</p>
+          </div>
+          <span className="text-xs text-primary font-medium flex-shrink-0">許可する →</span>
+        </button>
+      )}
+
+      {desktopPermission === "denied" && (
+        <div className="flex items-center gap-3 bg-muted rounded-xl p-4">
+          <BellOff className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium">デスクトップ通知がブロックされています</p>
+            <p className="text-xs text-muted-foreground">ブラウザの設定からこのサイトの通知を許可してください</p>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="space-y-2">
